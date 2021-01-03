@@ -1,0 +1,32 @@
+2020-10-01 * Salary
+    Assets:Current    £100
+    Income:Job
+
+~ 2020-10
+    Clothing   £50
+
+2020-10-02 * Clothes store  ; new shoes
+    Assets:Current
+    Expenses:Clothing    £40.00
+
+2020-10-02 * Grocery store ; unbudgeted spending
+    Assets:Current
+    Expenses:Groceries    £20.00
+
+~ 2020-11
+    Groceries   £45
+
+; At this point the budget should be:
+;  -50 clothing
+; +100 income
+;  -45 groceries in the future
+; ----
+;    5 to be budgeted
+
+2020-11-02 * Salary
+    Assets:Current    £100
+    Income:Job
+
+2020-11-02 * Grocery store
+    Assets:Current
+    Expenses:Groceries    £30.00
