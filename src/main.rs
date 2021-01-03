@@ -2,35 +2,55 @@ use std::io::BufRead;
 
 fn main() {
     let path = "tests/test.journal";
-    lex(path);
+    let mut lexer = Lexer::new();
+    lexer.lex(path);
 }
 
-fn lex(path: &str) -> bool {
-    let file = std::fs::File::open(path).expect(&format!("file not found: {}", path));
-    let reader = std::io::BufReader::new(file);
+#[derive(Default)]
+struct Lexer {
+    line: String,
+    line_number: u64,
+    column: u64,
+}
 
-    let mut line_number = 0;
-    for line in reader.lines() {
-        line_number += 1;
-        match line {
-            Ok(l) => {
-                if !lex_line(l) {
+impl Lexer {
+    fn new() -> Self {
+        Default::default()
+    }
+
+    fn lex(&mut self, path: &str) -> bool {
+        let file = std::fs::File::open(path).expect(&format!("file not found: {}", path));
+        let reader = std::io::BufReader::new(file);
+
+        for line in reader.lines() {
+            self.line_number += 1;
+            match line {
+                Ok(l) => {
+                    if !self.lex_line(l) {
+                        return false;
+                    }
+                }
+                Err(e) => {
+                    println!("{}", e);
                     return false;
                 }
             }
-            Err(e) => {
-                println!("{}", e);
-                return false;
-            }
         }
+
+        println!("There were {} lines", self.line_number);
+
+        return true;
     }
 
-    println!("There were {} lines", line_number);
+    fn lex_line(&self, line: String) -> bool {
+        for c in line.chars() {
+            print!("{}", c);
+        }
+        println!();
+        true
+    }
 
-    return true;
-}
-
-fn lex_line(line: String) -> bool {
-    println!("{}", line);
-    true
+    fn next(&self) -> Option<char> {
+        Some('c')
+    }
 }
