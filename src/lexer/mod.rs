@@ -3,6 +3,7 @@ extern crate nom;
 mod account;
 mod comment;
 mod dates;
+mod include;
 mod payee;
 mod status;
 mod transaction_header;
