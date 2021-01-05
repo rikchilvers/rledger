@@ -1,6 +1,7 @@
 extern crate nom;
 
 mod dates;
+mod status;
 mod whitespace;
 
 use self::whitespace::*;
@@ -44,13 +45,6 @@ impl Lexer {
     fn lex_line(&mut self, line: String) -> bool {
         if line.len() == 0 {
             return true;
-        }
-
-        // let spaces = count_whitespace(&line);
-        let spaces = count_whitespace_multi(&line);
-
-        if let Ok(s) = spaces {
-            println!("{} spaces followed by {}", s.1, s.0);
         }
 
         true
