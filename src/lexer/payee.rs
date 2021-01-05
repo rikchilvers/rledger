@@ -1,10 +1,4 @@
-use nom::{
-    branch::alt,
-    bytes::complete::take_till,
-    combinator::{map_res, rest},
-    sequence::preceded,
-    IResult,
-};
+use nom::{branch::alt, bytes::complete::take_till, combinator::rest, sequence::preceded, IResult};
 
 pub fn payee(i: &str) -> IResult<&str, &str> {
     preceded(take_till(is_not_space), alt((take_till(is_comment), rest)))(i)
