@@ -6,9 +6,10 @@ use nom::combinator::opt;
 use nom::IResult;
 
 // TODO: first string here should be a date
-type TransactionHeader = (String, Status, String, Option<String>);
+// Date, Status, Payee, Comment
+pub type TransactionHeader = (String, Status, String, Option<String>);
 
-fn transaction_header(i: &str) -> IResult<&str, TransactionHeader> {
+pub fn transaction_header(i: &str) -> IResult<&str, TransactionHeader> {
     let (i, date) = date(i)?;
 
     let (i, maybe_comment) = opt(comment)(i)?;
