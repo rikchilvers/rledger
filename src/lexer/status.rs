@@ -5,18 +5,18 @@ use nom::{
     IResult,
 };
 
-fn status(i: &str) -> IResult<&str, Option<Status>> {
-    opt(alt((
-        value(Status::Cleared, recognize(tag("*"))),
-        value(Status::Uncleared, recognize(tag("!"))),
-    )))(i)
-}
-
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Status {
     None,
     Cleared,
     Uncleared,
+}
+
+fn status(i: &str) -> IResult<&str, Option<Status>> {
+    opt(alt((
+        value(Status::Cleared, recognize(tag("*"))),
+        value(Status::Uncleared, recognize(tag("!"))),
+    )))(i)
 }
 
 #[cfg(test)]
