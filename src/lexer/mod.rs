@@ -2,7 +2,9 @@ extern crate nom;
 
 mod comment;
 mod dates;
+mod payee;
 mod status;
+mod transaction_header;
 mod whitespace;
 
 use self::whitespace::*;

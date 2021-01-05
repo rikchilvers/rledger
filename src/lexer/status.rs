@@ -1,22 +1,28 @@
 use nom::{
     branch::alt,
-    bytes::complete::tag,
+    bytes::complete::{tag, take_till},
     combinator::{opt, recognize, value},
+    sequence::preceded,
     IResult,
 };
 
+use super::payee::*;
+
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Status {
-    None,
+    NoStatus,
     Cleared,
     Uncleared,
 }
 
-fn status(i: &str) -> IResult<&str, Option<Status>> {
-    opt(alt((
-        value(Status::Cleared, recognize(tag("*"))),
-        value(Status::Uncleared, recognize(tag("!"))),
-    )))(i)
+pub fn status(i: &str) -> IResult<&str, Option<Status>> {
+    preceded(
+        take_till(is_not_space),
+        opt(alt((
+            value(Status::Cleared, recognize(tag("*"))),
+            value(Status::Uncleared, recognize(tag("!"))),
+        ))),
+    )(i)
 }
 
 #[cfg(test)]

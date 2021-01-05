@@ -5,7 +5,7 @@ use nom::{
     IResult,
 };
 
-fn comment(i: &str) -> IResult<&str, &str> {
+pub fn comment(i: &str) -> IResult<&str, &str> {
     preceded(one_of(";#"), preceded(space0, rest))(i)
 }
 
