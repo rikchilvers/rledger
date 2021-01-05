@@ -8,16 +8,6 @@ use nom::{
 
 pub fn payee(i: &str) -> IResult<&str, &str> {
     preceded(take_till(is_not_space), alt((take_till(is_comment), rest)))(i)
-    // preceded(
-    //     take_till(is_not_space),
-    //     map_res(alt((take_till(is_comment), rest)), |s: &str| {
-    //         Ok(s.trim_end())
-    //     }),
-    // )(i)
-    // map_res(
-    //     preceded(take_till(is_not_space), alt((take_till(is_comment), rest))),
-    //     |s: &str| Ok(s.trim_end()),
-    // )(i)
 }
 
 pub fn is_not_space(chr: char) -> bool {
