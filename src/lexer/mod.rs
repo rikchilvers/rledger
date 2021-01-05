@@ -8,7 +8,6 @@ mod status;
 mod transaction_header;
 mod whitespace;
 
-use self::whitespace::*;
 use std::io::BufRead;
 
 #[derive(Default)]
