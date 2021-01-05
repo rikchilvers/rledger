@@ -1,5 +1,6 @@
 extern crate nom;
 
+mod account;
 mod comment;
 mod dates;
 mod payee;
