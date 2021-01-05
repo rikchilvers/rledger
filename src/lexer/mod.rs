@@ -1,5 +1,6 @@
 extern crate nom;
 
+mod comment;
 mod dates;
 mod status;
 mod whitespace;
