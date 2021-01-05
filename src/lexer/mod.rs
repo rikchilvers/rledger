@@ -6,6 +6,7 @@ mod dates;
 mod include;
 mod payee;
 mod status;
+mod transaction;
 mod transaction_header;
 mod whitespace;
 
