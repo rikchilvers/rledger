@@ -15,6 +15,12 @@ pub enum Status {
     Uncleared,
 }
 
+impl Default for Status {
+    fn default() -> Self {
+        Status::NoStatus
+    }
+}
+
 pub fn status(i: &str) -> IResult<&str, Option<Status>> {
     preceded(
         take_till(is_not_space),
