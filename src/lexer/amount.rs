@@ -8,10 +8,31 @@ use nom::{
     IResult,
 };
 
-#[derive(Default)]
+#[derive(Debug, Default, Eq, PartialEq)]
 pub struct Amount {
     commodity: String,
     quantity: i64,
+}
+
+impl Amount {
+    pub fn new() -> Self {
+        Default::default()
+    }
+}
+
+impl From<(f64, Option<&str>)> for Amount {
+    fn from(lexed: (f64, Option<&str>)) -> Self {
+        Amount {
+            commodity: lexed.1.unwrap_or("").to_owned(),
+            quantity: lexed.0 as i64 * 100 + (lexed.0.fract() * 100.) as i64,
+        }
+    }
+}
+
+pub fn amount_mapped(i: &str) -> IResult<&str, Amount> {
+    map_res::<_, _, _, _, nom::error::Error<&str>, _, _>(amount, |a: (f64, Option<&str>)| {
+        Ok(Amount::from(a))
+    })(i)
 }
 
 pub fn amount(i: &str) -> IResult<&str, (f64, Option<&str>)> {
@@ -46,6 +67,33 @@ fn sign(i: &str) -> IResult<&str, i8> {
 mod tests {
     use super::*;
     use nom::error::ErrorKind;
+
+    #[test]
+    fn it_maps_amounts() {
+        let expected = Amount {
+            commodity: " USD".to_owned(),
+            quantity: 4200,
+        };
+
+        assert_eq!(amount_mapped("42 USD"), Ok(("", expected)));
+
+        let expected = Amount {
+            commodity: "£".to_owned(),
+            quantity: 4560,
+        };
+
+        assert_eq!(amount_mapped("£45.60"), Ok(("", expected)));
+
+        let expected = Amount {
+            commodity: "€ ".to_owned(),
+            quantity: 3400,
+        };
+
+        assert_eq!(
+            amount_mapped("34€ ; a comment"),
+            Ok(("; a comment", expected))
+        );
+    }
 
     #[test]
     fn it_matches_amounts_with_no_commodity() {
