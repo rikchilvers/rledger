@@ -1,6 +1,7 @@
 extern crate nom;
 
 mod account;
+mod amount;
 mod comment;
 mod dates;
 mod include;
