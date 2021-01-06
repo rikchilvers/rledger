@@ -6,8 +6,8 @@ use nom::{
     IResult,
 };
 
-// ensures we count at least 2 spaces or a tab
-fn whitespace(i: &str) -> IResult<&str, Vec<&str>> {
+/// Counts at least 2 spaces or a tab
+pub fn whitespace(i: &str) -> IResult<&str, Vec<&str>> {
     terminated(
         many1(alt((tag("  "), tag("\t"), tag(" \t")))),
         many0(tag(" ")),

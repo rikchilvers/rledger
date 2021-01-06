@@ -6,12 +6,16 @@ mod comment;
 mod dates;
 mod include;
 mod payee;
+mod posting;
 mod status;
 mod transaction;
 mod transaction_header;
 mod whitespace;
 
 use std::io::BufRead;
+
+use posting::posting;
+use transaction::transaction;
 
 #[derive(Default)]
 pub struct Lexer {
@@ -53,6 +57,26 @@ impl Lexer {
             return true;
         }
 
+        if let Ok(t) = transaction(&line) {
+            println!("{:?}", t)
+        }
+
+        if let Ok(t) = posting(&line) {
+            println!("{:?}", t)
+        }
+
+        // let mut state = LexerState::None;
+        // let mut last = "";
+        // for g in line.graphemes(true) {
+        //     print!("{}", g);
+        //     last = g;
+        // }
+
         true
     }
+}
+
+enum LexerState {
+    None,
+    InDate,
 }
