@@ -1,19 +1,19 @@
 use super::{
     account::account,
     amount::{amount_mapped, Amount},
-    whitespace::whitespace,
+    whitespace::whitespace2,
 };
 
 use nom::{
-    combinator::{map_res, opt},
+    combinator::{map_res, opt, verify},
     sequence::{preceded, tuple},
     IResult,
 };
 
 #[derive(Debug, Default, Eq, PartialEq)]
 pub struct Posting {
-    path: String,
-    amount: Option<Amount>,
+    pub path: String,
+    pub amount: Option<Amount>,
 }
 
 impl Posting {
@@ -31,12 +31,23 @@ impl From<(&str, Option<Amount>)> for Posting {
     }
 }
 
-pub fn posting(i: &str) -> IResult<&str, Posting> {
-    preceded(
-        whitespace,
+/// Returns the indentation level and the posting
+pub fn posting(i: &str) -> IResult<&str, (u8, Posting)> {
+    tuple((
+        whitespace2,
         map_res::<_, _, _, _, nom::error::Error<&str>, _, _>(
             tuple((account, opt(amount_mapped))),
             |t: (&str, Option<Amount>)| Ok(Posting::from(t)),
         ),
-    )(i)
+    ))(i)
 }
+
+// pub fn posting(i: &str) -> IResult<&str, Posting> {
+//     preceded(
+//         verify(whitespace2, |c| *c >= 2),
+//         map_res::<_, _, _, _, nom::error::Error<&str>, _, _>(
+//             tuple((account, opt(amount_mapped))),
+//             |t: (&str, Option<Amount>)| Ok(Posting::from(t)),
+//         ),
+//     )(i)
+// }
