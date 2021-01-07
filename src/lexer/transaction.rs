@@ -1,8 +1,4 @@
-use super::amount::Amount;
-use super::posting::*;
-use super::status::Status;
-use super::transaction_header::*;
-use nom::{combinator::map_res, multi::many1, sequence::tuple, IResult};
+use super::{posting::*, status::Status, transaction_header::*};
 
 #[derive(Default, Debug, Eq, PartialEq)]
 pub struct Transaction {
@@ -17,28 +13,24 @@ impl Transaction {
         Default::default()
     }
 
-    pub fn from_header_and_postings(lexed: (TransactionHeader, Vec<Posting>)) -> Self {
+    pub fn from_header(header: TransactionHeader) -> Self {
         Transaction {
-            date: lexed.0.date,
-            status: lexed.0.status,
-            payee: lexed.0.payee,
-            postings: lexed.1,
+            date: header.date,
+            status: header.status,
+            payee: header.payee,
+            ..Default::default()
         }
     }
-}
 
-// pub fn transaction(i: &str) -> IResult<&str, Transaction> {
-//     map_res::<_, _, _, _, nom::error::Error<&str>, _, _>(
-//         tuple((transaction_header, many1(posting))),
-//         |x: (TransactionHeader, Vec<Posting>)| Ok(Transaction::from_header_and_postings(x)),
-//     )(i)
-//     // let (i, th) = transaction_header(i)?;
-//     // return Ok((i, Transaction::from_header(th)));
-// }
+    pub fn add_posting(&mut self, posting: Posting) {
+        self.postings.push(posting);
+    }
+}
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::lexer::amount::Amount;
 
     #[test]
     fn it_works() {
@@ -55,8 +47,8 @@ mod tests {
                 quantity: 1500,
             }),
         }];
-        let expected = Transaction::from_header_and_postings((th, ps));
-        let input = "2020-01-01 * A Shop\n\tAssets:Current  £15\n";
+        // let expected = Transaction::from_header_and_postings((th, ps));
+        // let input = "2020-01-01 * A Shop\n\tAssets:Current  £15\n";
         // let t = transaction(input);
         // assert_eq!(transaction(input), Ok(((""), expected)));
     }
