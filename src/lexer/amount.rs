@@ -10,8 +10,8 @@ use nom::{
 
 #[derive(Debug, Default, Eq, PartialEq)]
 pub struct Amount {
-    commodity: String,
-    quantity: i64,
+    pub commodity: String,
+    pub quantity: i64,
 }
 
 impl Amount {
