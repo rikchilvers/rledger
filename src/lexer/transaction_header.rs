@@ -1,4 +1,4 @@
-use super::comment::journal_comment;
+use super::comment::comment;
 use super::dates::date;
 use super::payee::payee;
 use super::status::*;
@@ -25,7 +25,7 @@ impl TransactionHeader {
 pub fn transaction_header(i: &str) -> IResult<&str, TransactionHeader> {
     let (i, date) = date(i)?;
 
-    let (i, maybe_comment) = opt(journal_comment)(i)?;
+    let (i, maybe_comment) = opt(comment)(i)?;
     if let Some(comment) = maybe_comment {
         let th = TransactionHeader {
             date,
@@ -39,7 +39,7 @@ pub fn transaction_header(i: &str) -> IResult<&str, TransactionHeader> {
     let (i, maybe_status) = status(i)?;
     let status = maybe_status.unwrap_or(Status::NoStatus);
 
-    let (i, maybe_comment) = opt(journal_comment)(i)?;
+    let (i, maybe_comment) = opt(comment)(i)?;
     if let Some(comment) = maybe_comment {
         let th = TransactionHeader {
             date,
@@ -53,7 +53,7 @@ pub fn transaction_header(i: &str) -> IResult<&str, TransactionHeader> {
     let (i, payee) = payee(i)?;
     let trimmed_payee = payee.trim_end().to_owned();
 
-    let (i, maybe_comment) = opt(journal_comment)(i)?;
+    let (i, maybe_comment) = opt(comment)(i)?;
     if let Some(comment) = maybe_comment {
         let th = TransactionHeader {
             date,

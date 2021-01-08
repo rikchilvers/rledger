@@ -62,6 +62,7 @@ impl Lexer {
 
     fn lex_line(&mut self, line: String) -> bool {
         if line.len() == 0 {
+            self.posting_depth = 0;
             self.close_transaction();
             self.state = LexerState::None;
             return true;
@@ -77,59 +78,62 @@ impl Lexer {
                 println!("unexpected transaction header");
                 return false;
             }
-            self.close_transaction();
 
+            self.posting_depth = 0;
+            self.close_transaction();
             self.state = LexerState::InTransaction;
+
+            self.current_transaction = Some(Transaction::from_header(t));
             println!("Transaction header");
 
             return true;
         }
 
         // Currently, this must come before postings because that lexer will match comments greedily
-        if let Ok((_, tc)) = transaction_comment(2, self.posting_depth, &line) {
-            if self.state != LexerState::InTransaction {
-                println!("unexpected transaction comment");
-                return false;
+        if let Ok((_, c)) = comment_min(2, &line) {
+            match self.state {
+                LexerState::InPosting => {
+                    println!("\tposting comment: {}", c);
+                }
+                LexerState::InTransaction => {
+                    println!("\ttransaction comment: {}", c);
+                }
+                _ => {
+                    println!("unexpected comment");
+                    return false;
+                }
             }
-
-            println!("\ttransaction comment: {}", tc);
-
-            return true;
-        }
-
-        // Currently, this must come before postings because that lexer will match comments greedily
-        if let Ok((_, pc)) = posting_comment(self.posting_depth, &line) {
-            if self.state != LexerState::InTransaction {
-                println!("unexpected posting comment");
-                return false;
-            }
-
-            println!("\tposting comment: {}", pc);
 
             return true;
         }
 
         if let Ok((_, (depth, posting))) = posting(&line) {
-            if self.state != LexerState::InTransaction {
+            if !(self.state == LexerState::InTransaction || self.state == LexerState::InPosting) {
                 println!("unexpected posting");
                 return false;
             }
 
-            self.posting_depth = depth;
-            println!("\tposting ({})", depth);
+            self.state = LexerState::InPosting;
 
-            return true;
+            if let Some(t) = &mut self.current_transaction {
+                self.posting_depth = depth;
+                t.add_posting(posting);
+                println!("\tposting ({})", depth);
+
+                return true;
+            } else {
+                println!("no transaction to add posting to");
+                return false;
+            }
         }
 
         true
     }
 
     fn close_transaction(&mut self) {
-        self.posting_depth = 0;
         if self.current_transaction.is_none() {
             return;
         }
-        println!("would close transaction")
     }
 }
 
@@ -141,7 +145,6 @@ enum LexerState {
     None,
     InTransaction,
     InPosting,
-    InPeriodicTransaction,
 }
 
 impl Default for LexerState {
