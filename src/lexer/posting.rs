@@ -41,13 +41,3 @@ pub fn posting(i: &str) -> IResult<&str, (u8, Posting)> {
         ),
     ))(i)
 }
-
-// pub fn posting(i: &str) -> IResult<&str, Posting> {
-//     preceded(
-//         verify(whitespace2, |c| *c >= 2),
-//         map_res::<_, _, _, _, nom::error::Error<&str>, _, _>(
-//             tuple((account, opt(amount_mapped))),
-//             |t: (&str, Option<Amount>)| Ok(Posting::from(t)),
-//         ),
-//     )(i)
-// }
