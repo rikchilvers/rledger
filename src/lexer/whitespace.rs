@@ -1,8 +1,9 @@
 use nom::{
     branch::alt,
     bytes::complete::{tag, take_while},
+    character::complete::char,
     combinator::{map, value, verify},
-    multi::{many0, many1},
+    multi::{fold_many0, many0, many1},
     sequence::terminated,
     IResult,
 };
@@ -16,6 +17,11 @@ pub fn whitespace2(i: &str) -> IResult<&str, u8> {
             many0(tag(" ")),
         ),
     )(i)
+}
+
+pub fn manyspace0(i: &str) -> IResult<&str, &str> {
+    fold_many0(alt((char(' '), char('\t'))), "", |a, _| a)(i)
+    // many0(alt(tag(" "), tag("\t")))(i)
 }
 
 /// Takes at least two spaces or one tab

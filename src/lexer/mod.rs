@@ -26,7 +26,6 @@ pub struct Lexer {
     state: LexerState,
     line_number: u64,
     current_transaction: Option<Transaction>,
-    posting_depth: u8,
 }
 
 impl Lexer {
@@ -63,7 +62,6 @@ impl Lexer {
 
     fn lex_line(&mut self, line: String) -> bool {
         if line.len() == 0 {
-            self.posting_depth = 0;
             self.close_transaction();
             self.state = LexerState::None;
             return true;
@@ -80,7 +78,6 @@ impl Lexer {
                 return false;
             }
 
-            self.posting_depth = 0;
             self.close_transaction();
             self.state = LexerState::InTransaction;
 
@@ -111,7 +108,7 @@ impl Lexer {
             return true;
         }
 
-        if let Ok((_, (depth, posting))) = posting(&line) {
+        if let Ok((_, posting)) = posting(&line) {
             if !(self.state == LexerState::InTransaction || self.state == LexerState::InPosting) {
                 println!("unexpected posting");
                 return false;
@@ -120,10 +117,7 @@ impl Lexer {
             self.state = LexerState::InPosting;
 
             if let Some(t) = &mut self.current_transaction {
-                self.posting_depth = depth;
                 t.add_posting(posting);
-                println!("\tposting ({})", depth);
-
                 return true;
             } else {
                 println!("no transaction to add posting to");

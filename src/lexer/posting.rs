@@ -1,12 +1,12 @@
 use super::{
     account::account,
     amount::{amount_mapped, Amount},
-    whitespace::whitespace2,
+    whitespace::{manyspace0, whitespace2},
 };
 
 use nom::{
     combinator::{map_res, opt},
-    sequence::tuple,
+    sequence::{preceded, tuple},
     IResult,
 };
 
@@ -26,12 +26,12 @@ impl From<(&str, Option<Amount>)> for Posting {
 }
 
 /// Returns the indentation level and the posting
-pub fn posting(i: &str) -> IResult<&str, (u8, Posting)> {
-    tuple((
+pub fn posting(i: &str) -> IResult<&str, Posting> {
+    preceded(
         whitespace2,
         map_res::<_, _, _, _, nom::error::Error<&str>, _, _>(
-            tuple((account, opt(amount_mapped))),
+            tuple((account, preceded(manyspace0, opt(amount_mapped)))),
             |t: (&str, Option<Amount>)| Ok(Posting::from(t)),
         ),
-    ))(i)
+    )(i)
 }
