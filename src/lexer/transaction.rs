@@ -1,24 +1,20 @@
 use super::{posting::*, status::Status, transaction_header::*};
 
-#[derive(Default, Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct Transaction {
-    date: String,
-    payee: String,
-    status: Status,
-    postings: Vec<Posting>,
+    pub date: time::Date,
+    pub payee: String,
+    pub status: Status,
+    pub postings: Vec<Posting>,
 }
 
 impl Transaction {
-    pub fn new() -> Self {
-        Default::default()
-    }
-
     pub fn from_header(header: TransactionHeader) -> Self {
         Transaction {
             date: header.date,
             status: header.status,
             payee: header.payee,
-            ..Default::default()
+            postings: vec![],
         }
     }
 
@@ -35,7 +31,7 @@ mod tests {
     #[test]
     fn it_works() {
         let th = TransactionHeader {
-            date: "2020-01-01".to_owned(),
+            date: time::Date::try_from_ymd(2020, 01, 01).unwrap(),
             payee: "A Shop".to_owned(),
             status: Status::Cleared,
             comment: None,

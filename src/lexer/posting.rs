@@ -16,12 +16,6 @@ pub struct Posting {
     pub amount: Option<Amount>,
 }
 
-impl Posting {
-    pub fn new() -> Self {
-        Default::default()
-    }
-}
-
 impl From<(&str, Option<Amount>)> for Posting {
     fn from(lexed: (&str, Option<Amount>)) -> Self {
         Posting {

@@ -5,37 +5,26 @@ use nom::{
     IResult,
 };
 
-pub fn date(i: &str) -> IResult<&str, String> {
-    let (i, date_first) = digit_many(i)?;
+pub fn date(i: &str) -> IResult<&str, time::Date> {
+    let (i, year) = digit_many(i)?;
 
-    let (i, maybe_date_second) = opt(preceded(one_of("/-."), digit_many))(i)?;
-
-    if let Some(date_second) = maybe_date_second {
-        let (i, maybe_date_third) = opt(preceded(one_of("/-."), digit_many))(i)?;
-
-        if let Some(date_third) = maybe_date_third {
-            return Ok((
-                i,
-                format!(
-                    "{0}-{1:>0width$}-{2:>0width$}",
-                    date_first,
-                    date_second,
-                    date_third,
-                    width = 2
-                ),
-            ));
+    let (i, maybe_month) = opt(preceded(one_of("/-."), digit_many))(i)?;
+    if let Some(month) = maybe_month {
+        let (i, maybe_day) = opt(preceded(one_of("/-."), digit_many))(i)?;
+        if let Some(day) = maybe_day {
+            let date = time::Date::try_from_ymd(year, month as u8, day as u8).unwrap();
+            return Ok((i, date));
         }
 
-        return Ok((
-            i,
-            format!("{0}-{1:>0width$}", date_first, date_second, width = 2),
-        ));
+        let date = time::Date::try_from_ymd(year, month as u8, 01).unwrap();
+        return Ok((i, date));
     }
 
-    Ok((i, format!("{}", date_first)))
+    let date = time::Date::try_from_ymd(year, 01, 01).unwrap();
+    Ok((i, date))
 }
 
-fn digit_many(i: &str) -> IResult<&str, u64> {
+fn digit_many(i: &str) -> IResult<&str, i32> {
     map_res(recognize(digit1), str::parse)(i)
 }
 
@@ -45,15 +34,13 @@ mod tests {
 
     #[test]
     fn it_finds_the_date() {
-        assert_eq!(date("20"), Ok(("", String::from("20"))));
+        assert_eq!(date("2021"), Ok(("", time::date!(2021 - 01 - 01))));
+        assert_eq!(date("2021/"), Ok(("/", time::date!(2021 - 01 - 01))));
 
-        assert_eq!(date("2021"), Ok(("", String::from("2021"))));
-        assert_eq!(date("2021/"), Ok(("/", String::from("2021"))));
+        assert_eq!(date("2021-11"), Ok(("", time::date!(2021 - 11 - 01))));
+        assert_eq!(date("2021-11/"), Ok(("/", time::date!(2021 - 11 - 01))));
 
-        assert_eq!(date("2021-11"), Ok(("", String::from("2021-11"))));
-        assert_eq!(date("2021-11/"), Ok(("/", String::from("2021-11"))));
-
-        assert_eq!(date("2021-01/21"), Ok(("", String::from("2021-01-21"))));
-        assert_eq!(date("2021.01.21/"), Ok(("/", String::from("2021-01-21"))));
+        assert_eq!(date("2021-01/21"), Ok(("", time::date!(2021 - 01 - 21))));
+        assert_eq!(date("2021.01.21/"), Ok(("/", time::date!(2021 - 01 - 21))));
     }
 }

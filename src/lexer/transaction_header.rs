@@ -8,18 +8,12 @@ use nom::IResult;
 // TODO: first string here should be a date
 // Date, Status, Payee, Comment
 // pub type TransactionHeader = (String, Status, String, Option<String>);
-#[derive(Default, Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct TransactionHeader {
-    pub date: String,
+    pub date: time::Date,
     pub status: Status,
     pub payee: String,
     pub comment: Option<String>,
-}
-
-impl TransactionHeader {
-    pub fn new() -> Self {
-        Default::default()
-    }
 }
 
 pub fn transaction_header(i: &str) -> IResult<&str, TransactionHeader> {
@@ -79,7 +73,8 @@ mod tests {
 
     #[test]
     fn it_lexes_just_date() {
-        let date = "2020-01-01".to_owned();
+        // let date = "2020-01-01".to_owned();
+        let date = time::Date::try_from_ymd(2020, 01, 01).unwrap();
         let comment = "a comment".to_owned();
         let payee = "".to_owned();
 
@@ -96,7 +91,7 @@ mod tests {
 
     #[test]
     fn it_lexes_to_status() {
-        let date = "2020-01-01".to_owned();
+        let date = time::Date::try_from_ymd(2020, 01, 01).unwrap();
         let comment = "a comment".to_owned();
         let payee = "".to_owned();
 
@@ -113,7 +108,7 @@ mod tests {
 
     #[test]
     fn it_lexes_to_payee() {
-        let date = "2020-01-01".to_owned();
+        let date = time::Date::try_from_ymd(2020, 01, 01).unwrap();
         let comment = "a comment".to_owned();
         let payee = "a payee".to_owned();
 

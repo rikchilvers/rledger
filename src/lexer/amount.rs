@@ -14,12 +14,6 @@ pub struct Amount {
     pub quantity: i64,
 }
 
-impl Amount {
-    pub fn new() -> Self {
-        Default::default()
-    }
-}
-
 impl From<(f64, Option<&str>)> for Amount {
     fn from(lexed: (f64, Option<&str>)) -> Self {
         Amount {

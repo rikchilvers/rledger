@@ -1,4 +1,5 @@
 extern crate nom;
+extern crate time;
 
 mod account;
 mod amount;
@@ -84,7 +85,10 @@ impl Lexer {
             self.state = LexerState::InTransaction;
 
             self.current_transaction = Some(Transaction::from_header(t));
-            println!("Transaction header");
+            println!(
+                "Transaction: {}",
+                self.current_transaction.as_ref().unwrap().date
+            );
 
             return true;
         }
