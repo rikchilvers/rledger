@@ -14,6 +14,13 @@ use nom::{
 pub struct Posting {
     pub path: String,
     pub amount: Option<Amount>,
+    pub comments: Vec<String>,
+}
+
+impl Posting {
+    pub fn add_comment(&mut self, comment: String) {
+        self.comments.push(comment)
+    }
 }
 
 impl From<(&str, Option<Amount>)> for Posting {
@@ -21,6 +28,16 @@ impl From<(&str, Option<Amount>)> for Posting {
         Posting {
             path: lexed.0.to_owned(),
             amount: lexed.1,
+            comments: vec![],
+        }
+    }
+}
+
+impl std::fmt::Display for Posting {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match &self.amount {
+            Some(a) => write!(f, "\t{}\t{}\n", self.path, a),
+            None => write!(f, "\t{}\n", self.path),
         }
     }
 }

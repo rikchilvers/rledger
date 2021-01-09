@@ -80,12 +80,7 @@ impl Lexer {
 
             self.close_transaction();
             self.state = LexerState::InTransaction;
-
             self.current_transaction = Some(Transaction::from_header(t));
-            println!(
-                "Transaction: {}",
-                self.current_transaction.as_ref().unwrap().date
-            );
 
             return true;
         }
@@ -94,10 +89,18 @@ impl Lexer {
         if let Ok((_, c)) = comment_min(2, &line) {
             match self.state {
                 LexerState::InPosting => {
-                    println!("\tposting comment: {}", c);
+                    if let Some(transaction) = &mut self.current_transaction {
+                    } else {
+                        println!("couldn't add posting comment");
+                    }
+                    // println!("\tposting comment: {}", c);
                 }
                 LexerState::InTransaction => {
-                    println!("\ttransaction comment: {}", c);
+                    if let Some(transaction) = &mut self.current_transaction {
+                        transaction.add_comment(c.to_owned())
+                    } else {
+                        println!("couldn't add transaction comment");
+                    }
                 }
                 _ => {
                     println!("unexpected comment");
@@ -132,6 +135,8 @@ impl Lexer {
         if self.current_transaction.is_none() {
             return;
         }
+        println!("{}", self.current_transaction.as_ref().unwrap());
+        self.current_transaction = None;
     }
 }
 

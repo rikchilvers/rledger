@@ -23,6 +23,13 @@ impl From<(f64, Option<&str>)> for Amount {
     }
 }
 
+impl std::fmt::Display for Amount {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let quantity = self.quantity as f64 / 100.;
+        write!(f, "{}{:.2}", self.commodity, quantity)
+    }
+}
+
 pub fn amount_mapped(i: &str) -> IResult<&str, Amount> {
     map_res::<_, _, _, _, nom::error::Error<&str>, _, _>(amount, |a: (f64, Option<&str>)| {
         Ok(Amount::from(a))
