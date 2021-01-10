@@ -34,8 +34,8 @@ impl std::fmt::Display for Transaction {
         let mut comments: Option<String> = None;
         for comment in self.comments.iter() {
             match comments {
-                Some(c) => comments = Some(format!("{}\n\t; {}", c, comment)),
-                None => comments = Some(format!("\t; {}", comment)),
+                Some(c) => comments = Some(format!("{}\n  ; {}", c, comment)),
+                None => comments = Some(format!("  ; {}", comment)),
             }
         }
 
