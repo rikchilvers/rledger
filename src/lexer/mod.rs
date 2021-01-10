@@ -17,7 +17,7 @@ use std::io::BufRead;
 
 use comment::*;
 use include::include;
-use posting::posting;
+use posting::{posting, Posting};
 use transaction::Transaction;
 use transaction_header::transaction_header;
 
@@ -26,6 +26,7 @@ pub struct Lexer {
     state: LexerState,
     line_number: u64,
     current_transaction: Option<Transaction>,
+    current_posting: Option<Posting>,
 }
 
 impl Lexer {
@@ -62,6 +63,7 @@ impl Lexer {
 
     fn lex_line(&mut self, line: String) -> bool {
         if line.len() == 0 {
+            self.add_posting();
             self.close_transaction();
             self.state = LexerState::None;
             return true;
@@ -78,7 +80,9 @@ impl Lexer {
                 return false;
             }
 
+            self.add_posting();
             self.close_transaction();
+
             self.state = LexerState::InTransaction;
             self.current_transaction = Some(Transaction::from_header(t));
 
@@ -87,13 +91,11 @@ impl Lexer {
 
         // Currently, this must come before postings because that lexer will match comments greedily
         if let Ok((_, c)) = comment_min(2, &line) {
-            match self.state {
+            match &mut self.state {
                 LexerState::InPosting => {
-                    if let Some(transaction) = &mut self.current_transaction {
-                    } else {
-                        println!("couldn't add posting comment");
+                    if let Some(p) = &mut self.current_posting {
+                        p.add_comment(c.to_owned());
                     }
-                    // println!("\tposting comment: {}", c);
                 }
                 LexerState::InTransaction => {
                     if let Some(transaction) = &mut self.current_transaction {
@@ -112,15 +114,25 @@ impl Lexer {
         }
 
         if let Ok((_, posting)) = posting(&line) {
-            if !(self.state == LexerState::InTransaction || self.state == LexerState::InPosting) {
+            if self.state == LexerState::None {
                 println!("unexpected posting");
                 return false;
             }
 
-            self.state = LexerState::InPosting;
+            // If we're already in a posting, we need to add it to the current transaction
+            self.add_posting();
 
+            self.state = LexerState::InPosting;
+            self.current_posting = Some(posting);
+        }
+
+        true
+    }
+
+    fn add_posting(&mut self) -> bool {
+        if let Some(current_posting) = self.current_posting.take() {
             if let Some(t) = &mut self.current_transaction {
-                t.add_posting(posting);
+                t.add_posting(current_posting);
                 return true;
             } else {
                 println!("no transaction to add posting to");
@@ -128,7 +140,7 @@ impl Lexer {
             }
         }
 
-        true
+        return true;
     }
 
     fn close_transaction(&mut self) {
