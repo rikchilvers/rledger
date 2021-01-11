@@ -1,10 +1,11 @@
-mod lexer;
+mod journal;
+mod reader;
 
-use crate::lexer::*;
+use crate::reader::Reader;
 
 fn main() {
     // let path = "tests/test.journal";
-    let path = "/Users/rik/Desktop/Untitled.txt";
-    let mut lexer = Lexer::new();
-    lexer.lex(path);
+    let path = "/Users/rik/Documents/Personal/Finance/current.journal";
+    let mut reader = Reader::new();
+    reader.lex(path);
 }

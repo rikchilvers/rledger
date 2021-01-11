@@ -1,20 +1,9 @@
-use super::comment::comment;
-use super::dates::date;
-use super::payee::payee;
-use super::status::*;
+use super::{comment::comment, dates::date, payee::payee, transaction_status::transaction_status};
 use nom::combinator::opt;
 use nom::IResult;
 
-// TODO: first string here should be a date
-// Date, Status, Payee, Comment
-// pub type TransactionHeader = (String, Status, String, Option<String>);
-#[derive(Debug, Eq, PartialEq)]
-pub struct TransactionHeader {
-    pub date: time::Date,
-    pub status: Status,
-    pub payee: String,
-    pub comment: Option<String>,
-}
+use crate::journal::transaction_header::TransactionHeader;
+use crate::journal::transaction_status::TransactionStatus;
 
 pub fn transaction_header(i: &str) -> IResult<&str, TransactionHeader> {
     let (i, date) = date(i)?;
@@ -23,15 +12,15 @@ pub fn transaction_header(i: &str) -> IResult<&str, TransactionHeader> {
     if let Some(comment) = maybe_comment {
         let th = TransactionHeader {
             date,
-            status: Status::NoStatus,
+            status: TransactionStatus::NoStatus,
             payee: "".to_owned(),
             comment: Some(comment.to_owned()),
         };
         return Ok((i, th));
     }
 
-    let (i, maybe_status) = status(i)?;
-    let status = maybe_status.unwrap_or(Status::NoStatus);
+    let (i, maybe_status) = transaction_status(i)?;
+    let status = maybe_status.unwrap_or(TransactionStatus::NoStatus);
 
     let (i, maybe_comment) = opt(comment)(i)?;
     if let Some(comment) = maybe_comment {
@@ -73,7 +62,6 @@ mod tests {
 
     #[test]
     fn it_lexes_just_date() {
-        // let date = "2020-01-01".to_owned();
         let date = time::Date::try_from_ymd(2020, 01, 01).unwrap();
         let comment = "a comment".to_owned();
         let payee = "".to_owned();
@@ -81,7 +69,7 @@ mod tests {
         let input = "2020-01-01 ; a comment";
         let th = TransactionHeader {
             date,
-            status: Status::NoStatus,
+            status: TransactionStatus::NoStatus,
             payee,
             comment: Some(comment),
         };
@@ -98,7 +86,7 @@ mod tests {
         let input = "2020-01-01 ! ; a comment";
         let th = TransactionHeader {
             date,
-            status: Status::Uncleared,
+            status: TransactionStatus::Uncleared,
             payee,
             comment: Some(comment),
         };
@@ -115,7 +103,7 @@ mod tests {
         let input = "2020-01-01 * a payee ; a comment";
         let th = TransactionHeader {
             date,
-            status: Status::Cleared,
+            status: TransactionStatus::Cleared,
             payee,
             comment: Some(comment),
         };

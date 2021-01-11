@@ -1,35 +1,31 @@
-extern crate nom;
-extern crate time;
-
-mod account;
-mod amount;
-mod comment;
-mod dates;
-mod include;
-mod payee;
-mod posting;
-mod status;
-mod transaction;
-mod transaction_header;
-mod whitespace;
-
+use super::{
+    comment::*, include::include, posting::posting, transaction_header::transaction_header,
+};
+use crate::journal::{posting::Posting, transaction::Transaction};
 use std::io::BufRead;
 
-use comment::*;
-use include::include;
-use posting::{posting, Posting};
-use transaction::Transaction;
-use transaction_header::transaction_header;
+#[derive(Debug, PartialEq, Eq)]
+enum ReaderState {
+    None,
+    InTransaction,
+    InPosting,
+}
+
+impl Default for ReaderState {
+    fn default() -> Self {
+        Self::None
+    }
+}
 
 #[derive(Default)]
-pub struct Lexer {
-    state: LexerState,
+pub struct Reader {
+    state: ReaderState,
     line_number: u64,
     current_transaction: Option<Transaction>,
     current_posting: Option<Posting>,
 }
 
-impl Lexer {
+impl Reader {
     pub fn new() -> Self {
         Default::default()
     }
@@ -69,7 +65,7 @@ impl Lexer {
                 println!("{}", t);
             }
             self.current_transaction = None;
-            self.state = LexerState::None;
+            self.state = ReaderState::None;
             return true;
         }
 
@@ -79,7 +75,7 @@ impl Lexer {
         }
 
         if let Ok((_, t)) = transaction_header(&line) {
-            if self.state != LexerState::None {
+            if self.state != ReaderState::None {
                 println!("unexpected transaction header");
                 return false;
             }
@@ -91,7 +87,7 @@ impl Lexer {
             }
             self.current_transaction = None;
 
-            self.state = LexerState::InTransaction;
+            self.state = ReaderState::InTransaction;
             self.current_transaction = Some(Transaction::from_header(t));
 
             return true;
@@ -100,12 +96,12 @@ impl Lexer {
         // Currently, this must come before postings because that lexer will match comments greedily
         if let Ok((_, c)) = comment_min(2, &line) {
             match &mut self.state {
-                LexerState::InPosting => {
+                ReaderState::InPosting => {
                     if let Some(p) = &mut self.current_posting {
                         p.add_comment(c.to_owned());
                     }
                 }
-                LexerState::InTransaction => {
+                ReaderState::InTransaction => {
                     if let Some(transaction) = &mut self.current_transaction {
                         transaction.add_comment(c.to_owned())
                     } else {
@@ -122,7 +118,7 @@ impl Lexer {
         }
 
         if let Ok((_, posting)) = posting(&line) {
-            if self.state == LexerState::None {
+            if self.state == ReaderState::None {
                 println!("unexpected posting");
                 return false;
             }
@@ -130,7 +126,7 @@ impl Lexer {
             // If we're already in a posting, we need to add it to the current transaction
             self.add_posting();
 
-            self.state = LexerState::InPosting;
+            self.state = ReaderState::InPosting;
             self.current_posting = Some(posting);
         }
 
@@ -149,21 +145,5 @@ impl Lexer {
         }
 
         return true;
-    }
-}
-
-#[derive(Clone, Debug)]
-struct Error {}
-
-#[derive(Debug, PartialEq, Eq)]
-enum LexerState {
-    None,
-    InTransaction,
-    InPosting,
-}
-
-impl Default for LexerState {
-    fn default() -> Self {
-        Self::None
     }
 }

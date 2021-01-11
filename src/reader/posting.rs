@@ -1,27 +1,15 @@
 use super::{
     account::account,
-    amount::{amount_mapped, Amount},
+    amount::amount_mapped,
     whitespace::{manyspace0, whitespace2},
 };
+use crate::journal::{amount::Amount, posting::Posting};
 
 use nom::{
     combinator::{map_res, opt},
     sequence::{preceded, tuple},
     IResult,
 };
-
-#[derive(Debug, Default, Eq, PartialEq)]
-pub struct Posting {
-    pub path: String,
-    pub amount: Option<Amount>,
-    pub comments: Vec<String>,
-}
-
-impl Posting {
-    pub fn add_comment(&mut self, comment: String) {
-        self.comments.push(comment)
-    }
-}
 
 impl From<(&str, Option<Amount>)> for Posting {
     fn from(lexed: (&str, Option<Amount>)) -> Self {

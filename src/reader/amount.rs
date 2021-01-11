@@ -1,3 +1,4 @@
+use crate::journal::amount::Amount;
 use nom::{
     branch::alt,
     branch::permutation,
@@ -7,21 +8,6 @@ use nom::{
     sequence::{preceded, tuple},
     IResult,
 };
-
-#[derive(Debug, Default, Eq, PartialEq)]
-pub struct Amount {
-    pub commodity: String,
-    pub quantity: i64,
-}
-
-impl Amount {
-    pub fn new(quantity: i64, commodity: &str) -> Self {
-        Amount {
-            quantity,
-            commodity: commodity.to_owned(),
-        }
-    }
-}
 
 impl From<(f64, Option<&str>)> for Amount {
     fn from(lexed: (f64, Option<&str>)) -> Self {

@@ -1,27 +1,16 @@
-use super::{amount::Amount, posting::*, status::Status, transaction_header::*};
+use super::{amount::Amount, posting::Posting, transaction_status::TransactionStatus};
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct Transaction {
     pub date: time::Date,
     pub payee: String,
-    pub status: Status,
+    pub status: TransactionStatus,
     pub postings: Vec<Posting>,
     pub comments: Vec<String>,
-    elided_amount_posting_index: Option<usize>,
+    pub elided_amount_posting_index: Option<usize>,
 }
 
 impl Transaction {
-    pub fn from_header(header: TransactionHeader) -> Self {
-        Transaction {
-            date: header.date,
-            status: header.status,
-            payee: header.payee,
-            postings: vec![],
-            comments: vec![],
-            elided_amount_posting_index: None,
-        }
-    }
-
     pub fn add_comment(&mut self, comment: String) {
         self.comments.push(comment);
     }
@@ -97,14 +86,15 @@ impl std::fmt::Display for Transaction {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::lexer::amount::Amount;
+    use crate::journal::amount::Amount;
 
     #[test]
     fn it_works() {
+        /*
         let th = TransactionHeader {
             date: time::Date::try_from_ymd(2020, 01, 01).unwrap(),
             payee: "A Shop".to_owned(),
-            status: Status::Cleared,
+            status: TransactionStatus::Cleared,
             comment: None,
         };
         let ps = vec![Posting {
@@ -115,6 +105,7 @@ mod tests {
             }),
             comments: vec![],
         }];
+        */
         // let expected = Transaction::from_header_and_postings((th, ps));
         // let input = "2020-01-01 * A Shop\n\tAssets:Current  £15\n";
         // let t = transaction(input);
