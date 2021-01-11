@@ -16,19 +16,6 @@ pub fn comment_min(min: u8, i: &str) -> IResult<&str, &str> {
     preceded(verify(whitespace2, |count| *count >= min), comment)(i)
 }
 
-/// Ensures min < spaces < max (unless max is 0)
-pub fn comment_min_max(min: u8, max: u8, i: &str) -> IResult<&str, &str> {
-    preceded(
-        verify(whitespace2, |count| {
-            if max > 0 {
-                return *count >= min && *count <= max;
-            }
-            return *count >= min;
-        }),
-        comment,
-    )(i)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
