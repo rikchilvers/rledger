@@ -6,7 +6,7 @@ use nom::{
     IResult,
 };
 
-use super::payee::*;
+use super::payee::is_not_space;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Status {
