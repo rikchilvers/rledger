@@ -26,16 +26,25 @@ impl Transaction {
         self.comments.push(comment);
     }
 
-    pub fn has_posting_with_elided_amount(&self) -> bool {
-        self.elided_amount_posting_index.is_some()
-    }
+    pub fn close(&mut self) {
+        let mut sum = 0_i64;
+        for p in self.postings.iter_mut() {
+            match &p.amount {
+                Some(a) => sum += a.quantity,
+                None => (),
+            }
+        }
 
-    pub fn balance_elided_posting(&mut self, quantity: i64) {
-        match self.elided_amount_posting_index {
-            None => return,
-            Some(index) => {
-                let posting = &mut self.postings[index];
-                posting.amount = Some(Amount::new(quantity, ""));
+        if sum != 0 {
+            if self.elided_amount_posting_index.is_none() {
+                panic!("transaction does not balance ({})\n{}", sum, self)
+            }
+
+            match self.elided_amount_posting_index {
+                None => return,
+                Some(index) => {
+                    self.postings[index].amount = Some(Amount::new(-sum, ""));
+                }
             }
         }
     }
