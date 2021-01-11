@@ -1,4 +1,4 @@
-use super::{posting::*, status::Status, transaction_header::*};
+use super::{amount::Amount, posting::*, status::Status, transaction_header::*};
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct Transaction {
@@ -7,6 +7,7 @@ pub struct Transaction {
     pub status: Status,
     pub postings: Vec<Posting>,
     pub comments: Vec<String>,
+    elided_amount_posting_index: Option<usize>,
 }
 
 impl Transaction {
@@ -17,6 +18,7 @@ impl Transaction {
             payee: header.payee,
             postings: vec![],
             comments: vec![],
+            elided_amount_posting_index: None,
         }
     }
 
@@ -24,7 +26,30 @@ impl Transaction {
         self.comments.push(comment);
     }
 
+    pub fn has_posting_with_elided_amount(&self) -> bool {
+        self.elided_amount_posting_index.is_some()
+    }
+
+    pub fn balance_elided_posting(&mut self, quantity: i64) {
+        match self.elided_amount_posting_index {
+            None => return,
+            Some(index) => {
+                let posting = &mut self.postings[index];
+                posting.amount = Some(Amount::new(quantity, ""));
+            }
+        }
+    }
+
     pub fn add_posting(&mut self, posting: Posting) {
+        match posting.amount {
+            Some(_) => {}
+            None => {
+                if self.elided_amount_posting_index.is_some() {
+                    panic!("cannot add two postings with elided amounts")
+                }
+                self.elided_amount_posting_index = Some(self.postings.len());
+            }
+        }
         self.postings.push(posting);
     }
 }

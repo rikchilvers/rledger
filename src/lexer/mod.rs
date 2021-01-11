@@ -65,6 +65,7 @@ impl Lexer {
         if line.len() == 0 {
             self.add_posting();
             self.close_transaction();
+            self.current_transaction = None;
             self.state = LexerState::None;
             return true;
         }
@@ -143,12 +144,32 @@ impl Lexer {
         return true;
     }
 
+    // TODO move inside Transaction
     fn close_transaction(&mut self) {
-        if self.current_transaction.is_none() {
-            return;
+        match &mut self.current_transaction {
+            Some(t) => {
+                let mut sum = 0_i64;
+                for p in t.postings.iter_mut() {
+                    match &p.amount {
+                        Some(a) => sum += a.quantity,
+                        None => (),
+                    }
+                }
+
+                if sum != 0 {
+                    // TODO remove this once fn is inside Transaction impl
+                    if !t.has_posting_with_elided_amount() {
+                        panic!("transaction does not balance ({})\n{}", sum, t)
+                    }
+
+                    t.balance_elided_posting(-sum);
+                }
+
+                println!("{}", self.current_transaction.as_ref().unwrap());
+                self.current_transaction = None;
+            }
+            None => return,
         }
-        println!("{}", self.current_transaction.as_ref().unwrap());
-        self.current_transaction = None;
     }
 }
 

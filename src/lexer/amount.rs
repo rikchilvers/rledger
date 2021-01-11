@@ -14,6 +14,15 @@ pub struct Amount {
     pub quantity: i64,
 }
 
+impl Amount {
+    pub fn new(quantity: i64, commodity: &str) -> Self {
+        Amount {
+            quantity,
+            commodity: commodity.to_owned(),
+        }
+    }
+}
+
 impl From<(f64, Option<&str>)> for Amount {
     fn from(lexed: (f64, Option<&str>)) -> Self {
         Amount {
