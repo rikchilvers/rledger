@@ -30,7 +30,7 @@ impl Reader {
         Default::default()
     }
 
-    pub fn lex(&mut self, path: &str) -> bool {
+    pub fn read(&mut self, path: &str) -> bool {
         let file = std::fs::File::open(path).expect(&format!("file not found: {}", path));
         let reader = std::io::BufReader::new(file);
 
@@ -41,7 +41,7 @@ impl Reader {
 
             match line {
                 Ok(l) => {
-                    if !self.lex_line(l) {
+                    if !self.read_line(l) {
                         return false;
                     }
                 }
@@ -57,7 +57,7 @@ impl Reader {
         return true;
     }
 
-    fn lex_line(&mut self, line: String) -> bool {
+    fn read_line(&mut self, line: String) -> bool {
         if line.len() == 0 {
             self.add_posting();
             if let Some(t) = &mut self.current_transaction {
