@@ -1,8 +1,11 @@
 extern crate clap;
 
+mod command;
 mod journal;
 mod reader;
 
+use crate::command::Command;
+use crate::command::Printer;
 use crate::reader::Reader;
 
 use clap::{App, Arg};
@@ -31,7 +34,10 @@ fn main() {
     if let Some(ref matches) = matches.subcommand_matches("print") {
         let path = "tests/test.journal";
         // let path = "/Users/rik/Documents/Personal/Finance/current.journal";
-        let mut reader = Reader::new();
+        //
+        let mut printer = Printer::new();
+        let mut reader = Reader::new(Box::new(|| printer.handle_posting()));
+
         reader.read(path);
     }
 }
