@@ -1,11 +1,12 @@
 use super::{amount::Amount, posting::Posting, transaction_status::TransactionStatus};
+use std::rc::Rc;
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug)]
 pub struct Transaction {
     pub date: time::Date,
     pub payee: String,
     pub status: TransactionStatus,
-    pub postings: Vec<Posting>,
+    pub postings: Vec<Rc<Posting>>,
     pub comments: Vec<String>,
     pub elided_amount_posting_index: Option<usize>,
 }
@@ -32,7 +33,9 @@ impl Transaction {
             match self.elided_amount_posting_index {
                 None => return,
                 Some(index) => {
-                    self.postings[index].amount = Some(Amount::new(-sum, ""));
+                    if let Some(posting) = Rc::get_mut(&mut self.postings[index]) {
+                        posting.amount = Some(Amount::new(-sum, ""));
+                    }
                 }
             }
         }
@@ -48,7 +51,7 @@ impl Transaction {
                 self.elided_amount_posting_index = Some(self.postings.len());
             }
         }
-        self.postings.push(posting);
+        self.postings.push(Rc::new(posting));
     }
 }
 

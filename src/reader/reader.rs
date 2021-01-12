@@ -2,7 +2,9 @@ use super::{
     comment::*, include::include, posting::posting, transaction_header::transaction_header,
 };
 use crate::journal::{posting::Posting, transaction::Transaction};
+use std::cell::RefCell;
 use std::io::BufRead;
+use std::rc::Rc;
 
 #[derive(Debug, PartialEq, Eq)]
 enum ReaderState {
@@ -21,7 +23,7 @@ impl Default for ReaderState {
 pub struct Reader {
     state: ReaderState,
     line_number: u64,
-    current_transaction: Option<Transaction>,
+    current_transaction: Option<Rc<RefCell<Transaction>>>,
     current_posting: Option<Posting>,
 }
 
@@ -61,8 +63,7 @@ impl Reader {
         if line.len() == 0 {
             self.add_posting();
             if let Some(t) = &mut self.current_transaction {
-                t.close();
-                println!("{}", t);
+                t.borrow_mut().close();
             }
             self.current_transaction = None;
             self.state = ReaderState::None;
@@ -81,14 +82,13 @@ impl Reader {
             }
 
             self.add_posting();
-            if let Some(t) = &mut self.current_transaction {
-                t.close();
-                println!("{}", t);
+            if let Some(ref mut t) = &mut self.current_transaction {
+                t.borrow_mut().close();
             }
             self.current_transaction = None;
 
             self.state = ReaderState::InTransaction;
-            self.current_transaction = Some(Transaction::from_header(t));
+            self.current_transaction = Some(Rc::new(RefCell::new(Transaction::from_header(t))));
 
             return true;
         }
@@ -103,7 +103,8 @@ impl Reader {
                 }
                 ReaderState::InTransaction => {
                     if let Some(transaction) = &mut self.current_transaction {
-                        transaction.add_comment(c.to_owned())
+                        transaction.borrow_mut().add_comment(c.to_owned());
+                    // transaction.add_comment(c.to_owned())
                     } else {
                         println!("couldn't add transaction comment");
                     }
@@ -134,9 +135,10 @@ impl Reader {
     }
 
     fn add_posting(&mut self) -> bool {
-        if let Some(current_posting) = self.current_posting.take() {
+        if let Some(mut current_posting) = self.current_posting.take() {
             if let Some(t) = &mut self.current_transaction {
-                t.add_posting(current_posting);
+                current_posting.transaction = Some(Rc::downgrade(t));
+                t.borrow_mut().add_posting(current_posting);
                 return true;
             } else {
                 println!("no transaction to add posting to");

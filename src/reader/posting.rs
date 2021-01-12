@@ -17,6 +17,7 @@ impl From<(&str, Option<Amount>)> for Posting {
             path: lexed.0.to_owned(),
             amount: lexed.1,
             comments: vec![],
+            transaction: None,
         }
     }
 }

@@ -1,10 +1,15 @@
-use super::amount::Amount;
+use std::cell::RefCell;
+use std::rc::Weak;
 
-#[derive(Debug, Default, Eq, PartialEq)]
+use super::amount::Amount;
+use super::transaction::Transaction;
+
+#[derive(Debug, Default)]
 pub struct Posting {
     pub path: String,
     pub amount: Option<Amount>,
     pub comments: Vec<String>,
+    pub transaction: Option<Weak<RefCell<Transaction>>>,
 }
 
 impl Posting {
