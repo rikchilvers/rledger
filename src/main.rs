@@ -2,10 +2,11 @@ extern crate clap;
 
 mod command;
 mod journal;
+mod print;
 mod reader;
 
 use crate::command::Command;
-use crate::command::Printer;
+use crate::print::Printer;
 use crate::reader::Reader;
 
 use clap::{App, Arg};
