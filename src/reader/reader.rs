@@ -4,6 +4,7 @@ use super::{
 use crate::journal::{posting::Posting, transaction::Transaction};
 use std::cell::RefCell;
 use std::io::BufRead;
+use std::io::Lines;
 use std::rc::Rc;
 
 #[derive(Debug, PartialEq, Eq)]
@@ -19,33 +20,58 @@ impl Default for ReaderState {
     }
 }
 
-type TransactionHandler<'a> = Box<dyn FnMut(Rc<RefCell<Transaction>>) + 'a>;
-
-pub struct Reader<'a> {
+pub struct Reader {
     state: ReaderState,
     line_number: u64,
+    // lines: std::io::Lines<Box<dyn std::io::BufRead>>,
+    lines: Lines<std::io::BufReader<std::fs::File>>,
+
     current_transaction: Option<Rc<RefCell<Transaction>>>,
     current_posting: Option<Posting>,
-    pub transaction_handler: TransactionHandler<'a>,
-    transactions: Vec<Rc<RefCell<Transaction>>>,
 }
 
-impl<'a> Reader<'a> {
-    pub fn new(handler: TransactionHandler<'a>) -> Self {
+impl Iterator for Reader {
+    // type Item = Rc<RefCell<Transaction>>;
+    type Item = String;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self.lines.next() {
+            None => return None,
+            Some(line) => match line {
+                Ok(l) => {
+                    self.line_number += 1;
+                    if !self.read_line(&l) {
+                        return None;
+                    }
+                    return Some(l);
+                }
+                Err(e) => {
+                    println!("{}", e);
+                    return None;
+                }
+            },
+        }
+    }
+}
+
+impl Reader {
+    pub fn new(path: &str) -> Self {
+        let file = std::fs::File::open(path).expect(&format!("file not found: {}", path));
+        let reader = std::io::BufReader::new(file);
+
         Self {
             state: ReaderState::None,
             line_number: 0,
+            lines: reader.lines(),
             current_transaction: None,
             current_posting: None,
-            transaction_handler: handler,
-            transactions: vec![],
         }
     }
 
     pub fn read(&mut self, path: &str) -> Option<&Vec<Rc<RefCell<Transaction>>>> {
-        let file = std::fs::File::open(path).expect(&format!("file not found: {}", path));
-        let reader = std::io::BufReader::new(file);
+        return None;
 
+        /*
         for line in reader.lines() {
             self.line_number += 1;
 
@@ -63,14 +89,14 @@ impl<'a> Reader<'a> {
         }
 
         return Some(&self.transactions);
+        */
     }
 
-    fn read_line(&mut self, line: String) -> bool {
+    fn read_line(&mut self, line: &str) -> bool {
         if line.len() == 0 {
             self.add_posting();
             if let Some(t) = &mut self.current_transaction {
                 t.borrow_mut().close();
-                self.transactions.push(Rc::clone(t));
                 // (self.transaction_handler)(Rc::clone(t));
             }
             self.current_transaction = None;
@@ -92,7 +118,6 @@ impl<'a> Reader<'a> {
             self.add_posting();
             if let Some(ref mut t) = &mut self.current_transaction {
                 t.borrow_mut().close();
-                self.transactions.push(Rc::clone(t));
             }
             self.current_transaction = None;
 
