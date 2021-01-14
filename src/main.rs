@@ -37,12 +37,14 @@ fn main() {
     }
 
     if let Some(_) = matches.subcommand_matches("print") {
-        let mut printer = Printer::new();
-        let mut reader = Reader::new(Box::new(|t| printer.handle_transaction(t)));
+        let printer = Printer::new();
+        let mut reader = Reader::new(Box::new(|_| {}));
 
-        reader.read(matches.value_of("file").unwrap());
-        drop(reader); // this is necessary but perhaps it means there's a better way?
-
-        printer.report();
+        printer.report_take(
+            reader
+                .read(matches.value_of("file").unwrap())
+                .unwrap_or(&vec![]),
+        );
+        // drop(reader); // this is necessary but perhaps it means there's a better way?
     }
 }

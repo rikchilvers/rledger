@@ -13,11 +13,17 @@ impl Printer {
             transactions: vec![],
         }
     }
+
+    pub fn report_take(&self, transactions: &Vec<Rc<RefCell<Transaction>>>) {
+        for transaction in transactions.iter() {
+            println!("{}", transaction.borrow());
+        }
+    }
 }
 
 impl Command for Printer {
     fn handle_transaction(&mut self, transaction: Rc<RefCell<Transaction>>) {
-        self.transactions.push(transaction);
+        // self.transactions.push(transaction);
     }
 
     fn report(&self) {

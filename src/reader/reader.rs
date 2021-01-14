@@ -27,6 +27,7 @@ pub struct Reader<'a> {
     current_transaction: Option<Rc<RefCell<Transaction>>>,
     current_posting: Option<Posting>,
     pub transaction_handler: TransactionHandler<'a>,
+    transactions: Vec<Rc<RefCell<Transaction>>>,
 }
 
 impl<'a> Reader<'a> {
@@ -37,10 +38,11 @@ impl<'a> Reader<'a> {
             current_transaction: None,
             current_posting: None,
             transaction_handler: handler,
+            transactions: vec![],
         }
     }
 
-    pub fn read(&mut self, path: &str) -> bool {
+    pub fn read(&mut self, path: &str) -> Option<&Vec<Rc<RefCell<Transaction>>>> {
         let file = std::fs::File::open(path).expect(&format!("file not found: {}", path));
         let reader = std::io::BufReader::new(file);
 
@@ -50,17 +52,17 @@ impl<'a> Reader<'a> {
             match line {
                 Ok(l) => {
                     if !self.read_line(l) {
-                        return false;
+                        return None;
                     }
                 }
                 Err(e) => {
                     println!("{}", e);
-                    return false;
+                    return None;
                 }
             }
         }
 
-        return true;
+        return Some(&self.transactions);
     }
 
     fn read_line(&mut self, line: String) -> bool {
@@ -68,7 +70,8 @@ impl<'a> Reader<'a> {
             self.add_posting();
             if let Some(t) = &mut self.current_transaction {
                 t.borrow_mut().close();
-                (self.transaction_handler)(Rc::clone(t));
+                self.transactions.push(Rc::clone(t));
+                // (self.transaction_handler)(Rc::clone(t));
             }
             self.current_transaction = None;
             self.state = ReaderState::None;
@@ -89,6 +92,7 @@ impl<'a> Reader<'a> {
             self.add_posting();
             if let Some(ref mut t) = &mut self.current_transaction {
                 t.borrow_mut().close();
+                self.transactions.push(Rc::clone(t));
             }
             self.current_transaction = None;
 
