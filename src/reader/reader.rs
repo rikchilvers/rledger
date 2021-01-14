@@ -30,27 +30,32 @@ pub struct Reader {
 }
 
 impl Iterator for Reader {
-    type Item = Option<Rc<RefCell<Transaction>>>;
+    type Item = Rc<RefCell<Transaction>>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        match self.lines.next() {
-            None => return None,
-            Some(line) => match line {
-                Ok(line) => {
-                    self.line_number += 1;
-                    match self.read_line(&line) {
-                        Err(e) => {
-                            println!("{}", e);
-                            return None;
+        loop {
+            match self.lines.next() {
+                None => return None,
+                Some(line) => match line {
+                    Ok(line) => {
+                        self.line_number += 1;
+                        match self.read_line(&line) {
+                            Ok(transaction) => match transaction {
+                                None => continue,
+                                Some(transaction) => return Some(transaction),
+                            },
+                            Err(e) => {
+                                println!("{}", e);
+                                return None;
+                            }
                         }
-                        Ok(transaction) => return Some(transaction),
                     }
-                }
-                Err(e) => {
-                    println!("{}", e);
-                    return None;
-                }
-            },
+                    Err(e) => {
+                        println!("{}", e);
+                        return None;
+                    }
+                },
+            }
         }
     }
 }
