@@ -75,71 +75,61 @@ impl Reader {
     }
 
     fn read_line(&mut self, line: &str) -> Result<Option<Rc<RefCell<Transaction>>>, &str> {
-        let mut transaction_completed: Option<Rc<RefCell<Transaction>>> = None;
+        let mut completed_transaction: Option<Rc<RefCell<Transaction>>> = None;
 
         if line.len() == 0 {
             self.add_posting();
-            if let Some(t) = &mut self.current_transaction {
+            if let Some(t) = &mut self.current_transaction.take() {
                 t.borrow_mut().close();
-                transaction_completed = Some(t.clone());
+                completed_transaction = Some(t.clone());
             }
-            self.current_transaction = None;
             self.state = ReaderState::None;
-            return Ok(transaction_completed);
+            return Ok(completed_transaction);
         }
 
         if let Ok((_, include)) = include(&line) {
             println!(">> include: {}", include);
-            return Ok(transaction_completed);
+            return Ok(completed_transaction);
         }
 
         if let Ok((_, t)) = transaction_header(&line) {
             if self.state != ReaderState::None {
-                println!("unexpected transaction header");
-                return Err("uth");
+                return Err("unexpected transaction header");
             }
 
             self.add_posting();
             if let Some(ref mut t) = &mut self.current_transaction {
                 t.borrow_mut().close();
-                transaction_completed = Some(t.clone());
+                completed_transaction = Some(t.clone());
             }
             self.current_transaction = None;
 
             self.state = ReaderState::InTransaction;
             self.current_transaction = Some(Rc::new(RefCell::new(Transaction::from_header(t))));
 
-            return Ok(transaction_completed);
+            return Ok(completed_transaction);
         }
 
         // Currently, this must come before postings because that lexer will match comments greedily
         if let Ok((_, c)) = comment_min(2, &line) {
             match &mut self.state {
-                ReaderState::InPosting => {
-                    if let Some(p) = &mut self.current_posting {
-                        p.add_comment(c.to_owned());
-                    }
-                }
-                ReaderState::InTransaction => {
-                    if let Some(transaction) = &mut self.current_transaction {
-                        transaction.borrow_mut().add_comment(c.to_owned());
-                    } else {
-                        println!("couldn't add transaction comment");
-                    }
-                }
-                _ => {
-                    println!("unexpected comment");
-                    return Err("uc");
-                }
+                ReaderState::InPosting => match &mut self.current_posting {
+                    Some(p) => p.add_comment(c.to_owned()),
+                    None => return Err("no posting"),
+                },
+                ReaderState::InTransaction => match &mut self.current_transaction {
+                    Some(transaction) => transaction.borrow_mut().add_comment(c.to_owned()),
+                    None => return Err("couldn't add transaction comment"),
+                },
+                _ => return Err("unexpected comment"),
             }
 
-            return Ok(transaction_completed);
+            return Ok(completed_transaction);
         }
 
         if let Ok((_, posting)) = posting(&line) {
             if self.state == ReaderState::None {
-                println!("unexpected posting");
-                return Err("up");
+                return Err("unexpected posting");
             }
 
             // If we're already in a posting, we need to add it to the current transaction
@@ -149,7 +139,7 @@ impl Reader {
             self.current_posting = Some(posting);
         }
 
-        Ok(transaction_completed)
+        Ok(completed_transaction)
     }
 
     fn add_posting(&mut self) -> bool {
