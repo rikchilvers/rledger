@@ -40,8 +40,13 @@ fn main() {
         // let printer = Printer::new();
         let reader = Reader::new(matches.value_of("file").unwrap());
 
-        for line in reader {
-            println!("{}", line)
+        for transaction in reader {
+            match transaction {
+                None => (),
+                Some(transaction) => {
+                    println!("{}", transaction.borrow())
+                }
+            }
         }
 
         // printer.report_take(

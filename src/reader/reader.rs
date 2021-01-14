@@ -23,7 +23,6 @@ impl Default for ReaderState {
 pub struct Reader {
     state: ReaderState,
     line_number: u64,
-    // lines: std::io::Lines<Box<dyn std::io::BufRead>>,
     lines: Lines<std::io::BufReader<std::fs::File>>,
 
     current_transaction: Option<Rc<RefCell<Transaction>>>,
@@ -31,19 +30,21 @@ pub struct Reader {
 }
 
 impl Iterator for Reader {
-    // type Item = Rc<RefCell<Transaction>>;
-    type Item = String;
+    type Item = Option<Rc<RefCell<Transaction>>>;
 
     fn next(&mut self) -> Option<Self::Item> {
         match self.lines.next() {
             None => return None,
             Some(line) => match line {
-                Ok(l) => {
+                Ok(line) => {
                     self.line_number += 1;
-                    if !self.read_line(&l) {
-                        return None;
+                    match self.read_line(&line) {
+                        Err(e) => {
+                            println!("{}", e);
+                            return None;
+                        }
+                        Ok(transaction) => return Some(transaction),
                     }
-                    return Some(l);
                 }
                 Err(e) => {
                     println!("{}", e);
@@ -68,63 +69,42 @@ impl Reader {
         }
     }
 
-    pub fn read(&mut self, path: &str) -> Option<&Vec<Rc<RefCell<Transaction>>>> {
-        return None;
+    fn read_line(&mut self, line: &str) -> Result<Option<Rc<RefCell<Transaction>>>, &str> {
+        let mut transaction_completed: Option<Rc<RefCell<Transaction>>> = None;
 
-        /*
-        for line in reader.lines() {
-            self.line_number += 1;
-
-            match line {
-                Ok(l) => {
-                    if !self.read_line(l) {
-                        return None;
-                    }
-                }
-                Err(e) => {
-                    println!("{}", e);
-                    return None;
-                }
-            }
-        }
-
-        return Some(&self.transactions);
-        */
-    }
-
-    fn read_line(&mut self, line: &str) -> bool {
         if line.len() == 0 {
             self.add_posting();
             if let Some(t) = &mut self.current_transaction {
                 t.borrow_mut().close();
-                // (self.transaction_handler)(Rc::clone(t));
+                transaction_completed = Some(t.clone());
             }
             self.current_transaction = None;
             self.state = ReaderState::None;
-            return true;
+            return Ok(transaction_completed);
         }
 
         if let Ok((_, include)) = include(&line) {
             println!(">> include: {}", include);
-            return true;
+            return Ok(transaction_completed);
         }
 
         if let Ok((_, t)) = transaction_header(&line) {
             if self.state != ReaderState::None {
                 println!("unexpected transaction header");
-                return false;
+                return Err("uth");
             }
 
             self.add_posting();
             if let Some(ref mut t) = &mut self.current_transaction {
                 t.borrow_mut().close();
+                transaction_completed = Some(t.clone());
             }
             self.current_transaction = None;
 
             self.state = ReaderState::InTransaction;
             self.current_transaction = Some(Rc::new(RefCell::new(Transaction::from_header(t))));
 
-            return true;
+            return Ok(transaction_completed);
         }
 
         // Currently, this must come before postings because that lexer will match comments greedily
@@ -138,24 +118,23 @@ impl Reader {
                 ReaderState::InTransaction => {
                     if let Some(transaction) = &mut self.current_transaction {
                         transaction.borrow_mut().add_comment(c.to_owned());
-                    // transaction.add_comment(c.to_owned())
                     } else {
                         println!("couldn't add transaction comment");
                     }
                 }
                 _ => {
                     println!("unexpected comment");
-                    return false;
+                    return Err("uc");
                 }
             }
 
-            return true;
+            return Ok(transaction_completed);
         }
 
         if let Ok((_, posting)) = posting(&line) {
             if self.state == ReaderState::None {
                 println!("unexpected posting");
-                return false;
+                return Err("up");
             }
 
             // If we're already in a posting, we need to add it to the current transaction
@@ -165,7 +144,7 @@ impl Reader {
             self.current_posting = Some(posting);
         }
 
-        true
+        Ok(transaction_completed)
     }
 
     fn add_posting(&mut self) -> bool {
