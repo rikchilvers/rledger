@@ -20,8 +20,7 @@ fn main() {
                 .short("f")
                 .long("file")
                 .help("The journal file to read.")
-                .default_value("$LEDGER_FILE")
-                .takes_value(true)
+                .env("LEDGER_FILE")
                 .value_name("LEDGER_FILE"),
         )
         .subcommand(
@@ -31,14 +30,16 @@ fn main() {
         )
         .get_matches();
 
-    if let Some(_) = matches.subcommand_matches("print") {
-        // let path = "tests/test.journal";
-        let path = "/Users/rik/Documents/Personal/Finance/current.journal";
+    if matches.value_of("file").is_none() && matches.occurrences_of("file") == 0 {
+        println!("No journal file was passed and none could be found in the environment.");
+        return;
+    }
 
+    if let Some(_) = matches.subcommand_matches("print") {
         let mut printer = Printer::new();
         let mut reader = Reader::new(Box::new(|t| printer.handle_transaction(t)));
 
-        reader.read(path);
+        reader.read(matches.value_of("file").unwrap());
         drop(reader); // this is necessary but perhaps it means there's a better way?
 
         printer.report();
