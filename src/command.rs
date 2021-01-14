@@ -4,7 +4,6 @@ use std::rc::Rc;
 
 pub trait Command {
     fn handle_transaction(&mut self, transaction: Rc<RefCell<Transaction>>);
-    fn handle_posting(&mut self);
     fn report(&self);
 }
 
@@ -22,12 +21,12 @@ impl Printer {
 
 impl Command for Printer {
     fn handle_transaction(&mut self, transaction: Rc<RefCell<Transaction>>) {
-        println!("printer handle transaction")
+        self.transactions.push(transaction);
     }
-    fn handle_posting(&mut self) {
-        println!("printer handle posting")
-    }
+
     fn report(&self) {
-        println!("printer report")
+        for transaction in self.transactions.iter() {
+            println!("{}", transaction.borrow());
+        }
     }
 }

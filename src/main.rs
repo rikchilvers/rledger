@@ -31,13 +31,16 @@ fn main() {
         )
         .get_matches();
 
-    if let Some(ref matches) = matches.subcommand_matches("print") {
-        let path = "tests/test.journal";
-        // let path = "/Users/rik/Documents/Personal/Finance/current.journal";
-        //
+    if let Some(_) = matches.subcommand_matches("print") {
+        // let path = "tests/test.journal";
+        let path = "/Users/rik/Documents/Personal/Finance/current.journal";
+
         let mut printer = Printer::new();
-        let mut reader = Reader::new(Box::new(|| printer.handle_posting()));
+        let mut reader = Reader::new(Box::new(|t| printer.handle_transaction(t)));
 
         reader.read(path);
+        drop(reader); // this is necessary but perhaps it means there's a better way?
+
+        printer.report();
     }
 }
