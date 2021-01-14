@@ -20,6 +20,26 @@ impl Default for ReaderState {
     }
 }
 
+enum ReaderError {
+    UnexpectedItem(String, u64),
+    MissingPosting(u64),
+    MissingTransaction(u64),
+}
+
+impl std::fmt::Display for ReaderError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ReaderError::UnexpectedItem(item, line) => {
+                write!(f, "Unexpected {} on line {}", item, line)
+            }
+            ReaderError::MissingPosting(line) => write!(f, "Missing posting on line {}", line),
+            ReaderError::MissingTransaction(line) => {
+                write!(f, "Missing transaction on line {}", line)
+            }
+        }
+    }
+}
+
 pub struct Reader {
     state: ReaderState,
     line_number: u64,
@@ -74,11 +94,12 @@ impl Reader {
         }
     }
 
-    fn read_line(&mut self, line: &str) -> Result<Option<Rc<RefCell<Transaction>>>, &str> {
+    fn read_line(&mut self, line: &str) -> Result<Option<Rc<RefCell<Transaction>>>, ReaderError> {
         let mut completed_transaction: Option<Rc<RefCell<Transaction>>> = None;
 
         if line.len() == 0 {
-            self.add_posting();
+            self.add_posting()?;
+            // We can take here as we want the transaction to be empty afterwards
             if let Some(t) = &mut self.current_transaction.take() {
                 t.borrow_mut().close();
                 completed_transaction = Some(t.clone());
@@ -87,22 +108,29 @@ impl Reader {
             return Ok(completed_transaction);
         }
 
+        // Check for include directive
         if let Ok((_, include)) = include(&line) {
             println!(">> include: {}", include);
             return Ok(completed_transaction);
         }
 
+        // Check for transaction header
         if let Ok((_, t)) = transaction_header(&line) {
             if self.state != ReaderState::None {
-                return Err("unexpected transaction header");
+                return Err(ReaderError::UnexpectedItem(
+                    "transaction header".to_owned(),
+                    self.line_number,
+                ));
             }
 
-            self.add_posting();
-            if let Some(ref mut t) = &mut self.current_transaction {
+            // We might have just read a transaction, so add that to the previous transaction
+            self.add_posting()?;
+
+            // If had a previous transaction, we need to close it now we're starting a new one
+            if let Some(ref t) = self.current_transaction {
                 t.borrow_mut().close();
                 completed_transaction = Some(t.clone());
             }
-            self.current_transaction = None;
 
             self.state = ReaderState::InTransaction;
             self.current_transaction = Some(Rc::new(RefCell::new(Transaction::from_header(t))));
@@ -110,30 +138,40 @@ impl Reader {
             return Ok(completed_transaction);
         }
 
-        // Currently, this must come before postings because that lexer will match comments greedily
+        // Check for comments
+        // This must come before postings because that lexer will match comments greedily
         if let Ok((_, c)) = comment_min(2, &line) {
-            match &mut self.state {
-                ReaderState::InPosting => match &mut self.current_posting {
-                    Some(p) => p.add_comment(c.to_owned()),
-                    None => return Err("no posting"),
+            match self.state {
+                ReaderState::InPosting => match self.current_posting {
+                    Some(ref mut p) => p.add_comment(c.to_owned()),
+                    None => return Err(ReaderError::MissingPosting(self.line_number)),
                 },
-                ReaderState::InTransaction => match &mut self.current_transaction {
-                    Some(transaction) => transaction.borrow_mut().add_comment(c.to_owned()),
-                    None => return Err("couldn't add transaction comment"),
+                ReaderState::InTransaction => match self.current_transaction {
+                    Some(ref mut transaction) => transaction.borrow_mut().add_comment(c.to_owned()),
+                    None => return Err(ReaderError::MissingTransaction(self.line_number)),
                 },
-                _ => return Err("unexpected comment"),
+                _ => {
+                    return Err(ReaderError::UnexpectedItem(
+                        "comment".to_owned(),
+                        self.line_number,
+                    ))
+                }
             }
 
             return Ok(completed_transaction);
         }
 
+        // Check for postings
         if let Ok((_, posting)) = posting(&line) {
             if self.state == ReaderState::None {
-                return Err("unexpected posting");
+                return Err(ReaderError::UnexpectedItem(
+                    "posting".to_owned(),
+                    self.line_number,
+                ));
             }
 
             // If we're already in a posting, we need to add it to the current transaction
-            self.add_posting();
+            self.add_posting()?;
 
             self.state = ReaderState::InPosting;
             self.current_posting = Some(posting);
@@ -142,18 +180,17 @@ impl Reader {
         Ok(completed_transaction)
     }
 
-    fn add_posting(&mut self) -> bool {
+    fn add_posting(&mut self) -> Result<(), ReaderError> {
         if let Some(mut current_posting) = self.current_posting.take() {
             if let Some(t) = &mut self.current_transaction {
                 current_posting.transaction = Some(Rc::downgrade(t));
                 t.borrow_mut().add_posting(current_posting);
-                return true;
+                return Ok(());
             } else {
-                println!("no transaction to add posting to");
-                return false;
+                return Err(ReaderError::MissingTransaction(self.line_number));
             }
         }
 
-        return true;
+        return Ok(());
     }
 }
