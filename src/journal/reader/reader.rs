@@ -1,5 +1,6 @@
 use super::{
-    comment::*, include::include, posting::posting, transaction_header::transaction_header,
+    comment::*, error::ReaderError, include::include, posting::posting,
+    transaction_header::transaction_header,
 };
 use crate::journal::{posting::Posting, transaction::Transaction};
 use std::cell::RefCell;
@@ -20,26 +21,6 @@ impl Default for ReaderState {
     }
 }
 
-enum ReaderError {
-    UnexpectedItem(String, u64),
-    MissingPosting(u64),
-    MissingTransaction(u64),
-}
-
-impl std::fmt::Display for ReaderError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ReaderError::UnexpectedItem(item, line) => {
-                write!(f, "Unexpected {} on line {}", item, line)
-            }
-            ReaderError::MissingPosting(line) => write!(f, "Missing posting on line {}", line),
-            ReaderError::MissingTransaction(line) => {
-                write!(f, "Missing transaction on line {}", line)
-            }
-        }
-    }
-}
-
 pub struct Reader {
     state: ReaderState,
     line_number: u64,
@@ -53,29 +34,27 @@ impl Iterator for Reader {
     type Item = Rc<RefCell<Transaction>>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        loop {
-            match self.lines.next() {
-                None => return None,
-                Some(line) => match line {
-                    Ok(line) => {
-                        self.line_number += 1;
-                        match self.read_line(&line) {
-                            Ok(transaction) => match transaction {
-                                None => continue,
-                                Some(transaction) => return Some(transaction),
-                            },
-                            Err(e) => {
-                                println!("{}", e);
-                                return None;
-                            }
+        match self.lines.next() {
+            None => return None,
+            Some(line) => match line {
+                Ok(line) => {
+                    self.line_number += 1;
+                    match self.read_line(&line) {
+                        Ok(transaction) => match transaction {
+                            None => return self.next(),
+                            Some(transaction) => return Some(transaction),
+                        },
+                        Err(e) => {
+                            println!("{}", e);
+                            return None;
                         }
                     }
-                    Err(e) => {
-                        println!("{}", e);
-                        return None;
-                    }
-                },
-            }
+                }
+                Err(e) => {
+                    println!("{}", e);
+                    return None;
+                }
+            },
         }
     }
 }
