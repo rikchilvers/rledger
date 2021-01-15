@@ -1,4 +1,6 @@
-use super::{amount::Amount, posting::Posting, transaction_status::TransactionStatus};
+use super::{
+    amount::Amount, error::Error, posting::Posting, transaction_status::TransactionStatus,
+};
 use std::rc::Rc;
 
 #[derive(Debug)]
@@ -12,11 +14,8 @@ pub struct Transaction {
 }
 
 impl Transaction {
-    pub fn add_comment(&mut self, comment: String) {
-        self.comments.push(comment);
-    }
-
-    pub fn close(&mut self) {
+    // TODO: move inside reader
+    pub fn close(&mut self) -> Result<(), Error> {
         let mut sum = 0_i64;
         for p in self.postings.iter_mut() {
             match &p.amount {
@@ -27,11 +26,12 @@ impl Transaction {
 
         if sum != 0 {
             if self.elided_amount_posting_index.is_none() {
-                panic!("transaction does not balance ({})\n{}", sum, self)
+                println!("transaction does not balance ({})\n{}", sum, self);
+                return Err(Error::TransactionDoesNotBalance);
             }
 
             match self.elided_amount_posting_index {
-                None => return,
+                None => return Ok(()),
                 Some(index) => {
                     if let Some(posting) = Rc::get_mut(&mut self.postings[index]) {
                         posting.amount = Some(Amount::new(-sum, ""));
@@ -39,19 +39,8 @@ impl Transaction {
                 }
             }
         }
-    }
 
-    pub fn add_posting(&mut self, posting: Posting) {
-        match posting.amount {
-            Some(_) => {}
-            None => {
-                if self.elided_amount_posting_index.is_some() {
-                    panic!("cannot add two postings with elided amounts")
-                }
-                self.elided_amount_posting_index = Some(self.postings.len());
-            }
-        }
-        self.postings.push(Rc::new(posting));
+        return Ok(());
     }
 }
 

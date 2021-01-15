@@ -2,6 +2,7 @@ pub enum ReaderError {
     UnexpectedItem(String, u64),
     MissingPosting(u64),
     MissingTransaction(u64),
+    TwoPostingsWithElidedAmounts(u64),
 }
 
 impl std::fmt::Display for ReaderError {
@@ -13,6 +14,9 @@ impl std::fmt::Display for ReaderError {
             ReaderError::MissingPosting(line) => write!(f, "Missing posting on line {}", line),
             ReaderError::MissingTransaction(line) => {
                 write!(f, "Missing transaction on line {}", line)
+            }
+            ReaderError::TwoPostingsWithElidedAmounts(line) => {
+                write!(f, "Two postings with elided amounts on line {}", line)
             }
         }
     }

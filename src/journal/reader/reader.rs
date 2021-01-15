@@ -126,7 +126,9 @@ impl Reader {
                     None => return Err(ReaderError::MissingPosting(self.line_number)),
                 },
                 ReaderState::InTransaction => match self.current_transaction {
-                    Some(ref mut transaction) => transaction.borrow_mut().add_comment(c.to_owned()),
+                    Some(ref mut transaction) => {
+                        transaction.borrow_mut().comments.push(c.to_owned())
+                    }
                     None => return Err(ReaderError::MissingTransaction(self.line_number)),
                 },
                 _ => {
@@ -160,16 +162,27 @@ impl Reader {
     }
 
     fn add_posting(&mut self) -> Result<(), ReaderError> {
-        if let Some(mut current_posting) = self.current_posting.take() {
-            if let Some(t) = &mut self.current_transaction {
-                current_posting.transaction = Some(Rc::downgrade(t));
-                t.borrow_mut().add_posting(current_posting);
-                return Ok(());
-            } else {
-                return Err(ReaderError::MissingTransaction(self.line_number));
-            }
-        }
+        match self.current_posting.take() {
+            None => return Ok(()),
+            Some(mut posting) => match self.current_transaction {
+                None => return Err(ReaderError::MissingTransaction(self.line_number)),
+                Some(ref transaction) => {
+                    if posting.amount.is_none() {
+                        if transaction.borrow().elided_amount_posting_index.is_some() {
+                            return Err(ReaderError::TwoPostingsWithElidedAmounts(
+                                self.line_number,
+                            ));
+                        }
+                        let index = transaction.borrow().postings.len();
+                        transaction.borrow_mut().elided_amount_posting_index = Some(index);
+                    }
 
-        return Ok(());
+                    posting.transaction = Some(Rc::downgrade(transaction));
+                    transaction.borrow_mut().postings.push(Rc::new(posting));
+
+                    return Ok(());
+                }
+            },
+        }
     }
 }

@@ -1,5 +1,6 @@
 pub mod account;
 pub mod amount;
+pub mod error;
 pub mod posting;
 pub mod transaction;
 pub mod transaction_header;
