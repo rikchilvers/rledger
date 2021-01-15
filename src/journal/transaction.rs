@@ -13,37 +13,6 @@ pub struct Transaction {
     pub elided_amount_posting_index: Option<usize>,
 }
 
-impl Transaction {
-    // TODO: move inside reader
-    pub fn close(&mut self) -> Result<(), Error> {
-        let mut sum = 0_i64;
-        for p in self.postings.iter_mut() {
-            match &p.amount {
-                Some(a) => sum += a.quantity,
-                None => (),
-            }
-        }
-
-        if sum != 0 {
-            if self.elided_amount_posting_index.is_none() {
-                println!("transaction does not balance ({})\n{}", sum, self);
-                return Err(Error::TransactionDoesNotBalance);
-            }
-
-            match self.elided_amount_posting_index {
-                None => return Ok(()),
-                Some(index) => {
-                    if let Some(posting) = Rc::get_mut(&mut self.postings[index]) {
-                        posting.amount = Some(Amount::new(-sum, ""));
-                    }
-                }
-            }
-        }
-
-        return Ok(());
-    }
-}
-
 impl std::fmt::Display for Transaction {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut comments: Option<String> = None;

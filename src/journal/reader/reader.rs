@@ -2,7 +2,7 @@ use super::{
     comment::*, error::ReaderError, include::include, posting::posting,
     transaction_header::transaction_header,
 };
-use crate::journal::{posting::Posting, transaction::Transaction};
+use crate::journal::{amount::Amount, posting::Posting, transaction::Transaction};
 use std::cell::RefCell;
 use std::io::BufRead;
 use std::io::Lines;
@@ -80,7 +80,7 @@ impl Reader {
             self.add_posting()?;
             // We can take here as we want the transaction to be empty afterwards
             if let Some(t) = &mut self.current_transaction.take() {
-                t.borrow_mut().close();
+                self.close_transaction(t)?;
                 completed_transaction = Some(t.clone());
             }
             self.state = ReaderState::None;
@@ -107,7 +107,7 @@ impl Reader {
 
             // If had a previous transaction, we need to close it now we're starting a new one
             if let Some(ref t) = self.current_transaction {
-                t.borrow_mut().close();
+                self.close_transaction(t)?;
                 completed_transaction = Some(t.clone());
             }
 
@@ -184,5 +184,38 @@ impl Reader {
                 }
             },
         }
+    }
+
+    pub fn close_transaction(
+        &self,
+        transaction: &Rc<RefCell<Transaction>>,
+    ) -> Result<(), ReaderError> {
+        let mut sum = 0_i64;
+        for p in transaction.borrow_mut().postings.iter_mut() {
+            match &p.amount {
+                Some(a) => sum += a.quantity,
+                None => (),
+            }
+        }
+
+        if sum == 0 {
+            return Ok(());
+        }
+
+        // If there is no posting with an elided amount, we can't balance the transaction
+        if transaction.borrow().elided_amount_posting_index.is_none() {
+            return Err(ReaderError::TransactionDoesNotBalance(self.line_number));
+        }
+
+        let index = transaction.borrow().elided_amount_posting_index.unwrap();
+
+        match Rc::get_mut(&mut transaction.borrow_mut().postings[index]) {
+            None => return Ok(()), // TODO we should probably handle this case
+            Some(posting) => {
+                posting.amount = Some(Amount::new(-sum, ""));
+            }
+        }
+
+        Ok(())
     }
 }

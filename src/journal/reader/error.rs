@@ -3,6 +3,7 @@ pub enum ReaderError {
     MissingPosting(u64),
     MissingTransaction(u64),
     TwoPostingsWithElidedAmounts(u64),
+    TransactionDoesNotBalance(u64),
 }
 
 impl std::fmt::Display for ReaderError {
@@ -17,6 +18,9 @@ impl std::fmt::Display for ReaderError {
             }
             ReaderError::TwoPostingsWithElidedAmounts(line) => {
                 write!(f, "Two postings with elided amounts on line {}", line)
+            }
+            ReaderError::TransactionDoesNotBalance(line) => {
+                write!(f, "Transaction does not balance on line {}", line)
             }
         }
     }
