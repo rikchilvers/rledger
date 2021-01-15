@@ -27,6 +27,7 @@ pub struct Reader {
     lines: Lines<std::io::BufReader<std::fs::File>>,
 
     current_transaction: Option<Rc<RefCell<Transaction>>>,
+    // We keep track of the current posting so we can add commennts to it
     current_posting: Option<Posting>,
 }
 
@@ -152,6 +153,7 @@ impl Reader {
             }
 
             // If we're already in a posting, we need to add it to the current transaction
+            // We haven't done this already because we might need to add following comments first
             self.add_posting()?;
 
             self.state = ReaderState::InPosting;
@@ -204,7 +206,9 @@ impl Reader {
 
         // If there is no posting with an elided amount, we can't balance the transaction
         if transaction.borrow().elided_amount_posting_index.is_none() {
-            return Err(ReaderError::TransactionDoesNotBalance(self.line_number));
+            // we step up a line here because by this point we've moved past the transaction in
+            // question
+            return Err(ReaderError::TransactionDoesNotBalance(self.line_number - 1));
         }
 
         let index = transaction.borrow().elided_amount_posting_index.unwrap();

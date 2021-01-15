@@ -20,7 +20,7 @@ impl std::fmt::Display for ReaderError {
                 write!(f, "Two postings with elided amounts on line {}", line)
             }
             ReaderError::TransactionDoesNotBalance(line) => {
-                write!(f, "Transaction does not balance on line {}", line)
+                write!(f, "Transaction ending on line {} does not balance.", line)
             }
         }
     }
