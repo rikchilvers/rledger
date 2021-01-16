@@ -2,7 +2,10 @@ use super::{
     comment::*, error::ReaderError, include::include, posting::posting,
     transaction_header::transaction_header,
 };
-use crate::journal::{amount::Amount, posting::Posting, transaction::Transaction};
+use crate::journal::{
+    amount::Amount, posting::Posting, transaction::Transaction,
+    transaction_header::TransactionHeader,
+};
 use std::cell::RefCell;
 use std::io::BufRead;
 use std::io::Lines;
@@ -19,6 +22,16 @@ impl Default for ReaderState {
     fn default() -> Self {
         Self::None
     }
+}
+
+enum LineType {
+    None,
+    Empty,
+    PostingComment(String),
+    TransactionComment(String),
+    TransactionHeader(TransactionHeader),
+    Posting(Posting),
+    IncludeDirective(String),
 }
 
 pub struct Reader {
@@ -40,7 +53,7 @@ impl Iterator for Reader {
             Some(line) => match line {
                 Ok(line) => {
                     self.line_number += 1;
-                    match self.read_line(&line) {
+                    match self.read_to_next(&line) {
                         Ok(transaction) => match transaction {
                             None => return self.next(),
                             Some(transaction) => return Some(transaction),
@@ -61,8 +74,8 @@ impl Iterator for Reader {
 }
 
 impl Reader {
-    pub fn new(path: &str) -> Self {
-        let file = std::fs::File::open(path).expect(&format!("file not found: {}", path));
+    pub fn new(location: &str) -> Self {
+        let file = std::fs::File::open(location).expect(&format!("file not found"));
         let reader = std::io::BufReader::new(file);
 
         Self {
@@ -74,28 +87,95 @@ impl Reader {
         }
     }
 
-    fn read_line(&mut self, line: &str) -> Result<Option<Rc<RefCell<Transaction>>>, ReaderError> {
+    fn read_to_next(
+        &mut self,
+        line: &str,
+    ) -> Result<Option<Rc<RefCell<Transaction>>>, ReaderError> {
         let mut completed_transaction: Option<Rc<RefCell<Transaction>>> = None;
 
+        match self.parse_line(line) {
+            Err(e) => return Err(e),
+            Ok(line) => match line {
+                LineType::Empty => {
+                    self.add_posting()?;
+                    // We can take here as we want the transaction to be empty afterwards
+                    if let Some(t) = &mut self.current_transaction.take() {
+                        self.close_transaction(t)?;
+                        completed_transaction = Some(t.clone());
+                    }
+                    self.state = ReaderState::None;
+                    return Ok(completed_transaction);
+                }
+                LineType::IncludeDirective(include) => {
+                    println!(">> include: {}", include);
+                    // let path = self .location .parent() .unwrap() .join(include) .to_str() .unwrap();
+                    // self.included_file = Some(Box::new(Reader::new(path)));
+                    return Ok(completed_transaction);
+                }
+                LineType::TransactionHeader(transaction_header) => {
+                    // We might have just read a transaction, so add that to the previous transaction
+                    self.add_posting()?;
+
+                    // If had a previous transaction, we need to close it now we're starting a new one
+                    if let Some(t) = &self.current_transaction {
+                        self.close_transaction(t)?;
+                        completed_transaction = Some(t.clone());
+                    }
+
+                    self.state = ReaderState::InTransaction;
+                    self.current_transaction = Some(Rc::new(RefCell::new(
+                        Transaction::from_header(transaction_header),
+                    )));
+
+                    return Ok(completed_transaction);
+                }
+                LineType::Posting(posting) => {
+                    // If we're already in a posting, we need to add it to the current transaction
+                    // We haven't done this already because we might need to add following comments first
+                    self.add_posting()?;
+
+                    self.state = ReaderState::InPosting;
+                    self.current_posting = Some(posting);
+
+                    return Ok(completed_transaction);
+                }
+                LineType::PostingComment(comment) => match &mut self.current_posting {
+                    Some(p) => {
+                        p.add_comment(comment);
+                        return Ok(completed_transaction);
+                    }
+                    None => return Err(ReaderError::MissingPosting(self.line_number)),
+                },
+                LineType::TransactionComment(comment) => match self.current_transaction {
+                    Some(ref mut transaction) => {
+                        transaction.borrow_mut().comments.push(comment);
+                        return Ok(completed_transaction);
+                    }
+                    None => return Err(ReaderError::MissingTransaction(self.line_number)),
+                },
+                _ => Ok(None),
+            },
+        }
+    }
+
+    fn parse_line(&mut self, line: &str) -> Result<LineType, ReaderError> {
         if line.len() == 0 {
-            self.add_posting()?;
-            // We can take here as we want the transaction to be empty afterwards
-            if let Some(t) = &mut self.current_transaction.take() {
-                self.close_transaction(t)?;
-                completed_transaction = Some(t.clone());
-            }
-            self.state = ReaderState::None;
-            return Ok(completed_transaction);
+            return Ok(LineType::Empty);
         }
 
         // Check for include directive
         if let Ok((_, include)) = include(&line) {
-            println!(">> include: {}", include);
-            return Ok(completed_transaction);
+            if self.state != ReaderState::None {
+                return Err(ReaderError::UnexpectedItem(
+                    "include directive".to_owned(),
+                    self.line_number,
+                ));
+            }
+            return Ok(LineType::IncludeDirective(include.to_owned()));
         }
 
         // Check for transaction header
-        if let Ok((_, t)) = transaction_header(&line) {
+        if let Ok((_, transaction_header)) = transaction_header(&line) {
             if self.state != ReaderState::None {
                 return Err(ReaderError::UnexpectedItem(
                     "transaction header".to_owned(),
@@ -103,35 +183,17 @@ impl Reader {
                 ));
             }
 
-            // We might have just read a transaction, so add that to the previous transaction
-            self.add_posting()?;
-
-            // If had a previous transaction, we need to close it now we're starting a new one
-            if let Some(ref t) = self.current_transaction {
-                self.close_transaction(t)?;
-                completed_transaction = Some(t.clone());
-            }
-
-            self.state = ReaderState::InTransaction;
-            self.current_transaction = Some(Rc::new(RefCell::new(Transaction::from_header(t))));
-
-            return Ok(completed_transaction);
+            return Ok(LineType::TransactionHeader(transaction_header));
         }
 
         // Check for comments
         // This must come before postings because that lexer will match comments greedily
-        if let Ok((_, c)) = comment_min(2, &line) {
+        if let Ok((_, comment)) = comment_min(2, &line) {
             match self.state {
-                ReaderState::InPosting => match self.current_posting {
-                    Some(ref mut p) => p.add_comment(c.to_owned()),
-                    None => return Err(ReaderError::MissingPosting(self.line_number)),
-                },
-                ReaderState::InTransaction => match self.current_transaction {
-                    Some(ref mut transaction) => {
-                        transaction.borrow_mut().comments.push(c.to_owned())
-                    }
-                    None => return Err(ReaderError::MissingTransaction(self.line_number)),
-                },
+                ReaderState::InPosting => return Ok(LineType::PostingComment(comment.to_owned())),
+                ReaderState::InTransaction => {
+                    return Ok(LineType::TransactionComment(comment.to_owned()))
+                }
                 _ => {
                     return Err(ReaderError::UnexpectedItem(
                         "comment".to_owned(),
@@ -139,8 +201,6 @@ impl Reader {
                     ))
                 }
             }
-
-            return Ok(completed_transaction);
         }
 
         // Check for postings
@@ -152,15 +212,10 @@ impl Reader {
                 ));
             }
 
-            // If we're already in a posting, we need to add it to the current transaction
-            // We haven't done this already because we might need to add following comments first
-            self.add_posting()?;
-
-            self.state = ReaderState::InPosting;
-            self.current_posting = Some(posting);
+            return Ok(LineType::Posting(posting));
         }
 
-        Ok(completed_transaction)
+        Ok(LineType::None)
     }
 
     fn add_posting(&mut self) -> Result<(), ReaderError> {
