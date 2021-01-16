@@ -93,7 +93,7 @@ impl Reader {
     ) -> Result<Option<Rc<RefCell<Transaction>>>, ReaderError> {
         let mut completed_transaction: Option<Rc<RefCell<Transaction>>> = None;
 
-        match self.parse_line(line) {
+        match parse_line(line, self.line_number, &self.state) {
             Err(e) => return Err(e),
             Ok(line) => match line {
                 LineType::Empty => {
@@ -158,66 +158,6 @@ impl Reader {
         }
     }
 
-    fn parse_line(&mut self, line: &str) -> Result<LineType, ReaderError> {
-        if line.len() == 0 {
-            return Ok(LineType::Empty);
-        }
-
-        // Check for include directive
-        if let Ok((_, include)) = include(&line) {
-            if self.state != ReaderState::None {
-                return Err(ReaderError::UnexpectedItem(
-                    "include directive".to_owned(),
-                    self.line_number,
-                ));
-            }
-            return Ok(LineType::IncludeDirective(include.to_owned()));
-        }
-
-        // Check for transaction header
-        if let Ok((_, transaction_header)) = transaction_header(&line) {
-            if self.state != ReaderState::None {
-                return Err(ReaderError::UnexpectedItem(
-                    "transaction header".to_owned(),
-                    self.line_number,
-                ));
-            }
-
-            return Ok(LineType::TransactionHeader(transaction_header));
-        }
-
-        // Check for comments
-        // This must come before postings because that lexer will match comments greedily
-        if let Ok((_, comment)) = comment_min(2, &line) {
-            match self.state {
-                ReaderState::InPosting => return Ok(LineType::PostingComment(comment.to_owned())),
-                ReaderState::InTransaction => {
-                    return Ok(LineType::TransactionComment(comment.to_owned()))
-                }
-                _ => {
-                    return Err(ReaderError::UnexpectedItem(
-                        "comment".to_owned(),
-                        self.line_number,
-                    ))
-                }
-            }
-        }
-
-        // Check for postings
-        if let Ok((_, posting)) = posting(&line) {
-            if self.state == ReaderState::None {
-                return Err(ReaderError::UnexpectedItem(
-                    "posting".to_owned(),
-                    self.line_number,
-                ));
-            }
-
-            return Ok(LineType::Posting(posting));
-        }
-
-        Ok(LineType::None)
-    }
-
     fn add_posting(&mut self) -> Result<(), ReaderError> {
         match self.current_posting.take() {
             None => return Ok(()),
@@ -277,4 +217,64 @@ impl Reader {
 
         Ok(())
     }
+}
+
+fn parse_line(line: &str, line_number: u64, state: &ReaderState) -> Result<LineType, ReaderError> {
+    if line.len() == 0 {
+        return Ok(LineType::Empty);
+    }
+
+    // Check for include directive
+    if let Ok((_, include)) = include(&line) {
+        if state != &ReaderState::None {
+            return Err(ReaderError::UnexpectedItem(
+                "include directive".to_owned(),
+                line_number,
+            ));
+        }
+        return Ok(LineType::IncludeDirective(include.to_owned()));
+    }
+
+    // Check for transaction header
+    if let Ok((_, transaction_header)) = transaction_header(&line) {
+        if state != &ReaderState::None {
+            return Err(ReaderError::UnexpectedItem(
+                "transaction header".to_owned(),
+                line_number,
+            ));
+        }
+
+        return Ok(LineType::TransactionHeader(transaction_header));
+    }
+
+    // Check for comments
+    // This must come before postings because that lexer will match comments greedily
+    if let Ok((_, comment)) = comment_min(2, &line) {
+        match state {
+            ReaderState::InPosting => return Ok(LineType::PostingComment(comment.to_owned())),
+            ReaderState::InTransaction => {
+                return Ok(LineType::TransactionComment(comment.to_owned()))
+            }
+            _ => {
+                return Err(ReaderError::UnexpectedItem(
+                    "comment".to_owned(),
+                    line_number,
+                ))
+            }
+        }
+    }
+
+    // Check for postings
+    if let Ok((_, posting)) = posting(&line) {
+        if state == &ReaderState::None {
+            return Err(ReaderError::UnexpectedItem(
+                "posting".to_owned(),
+                line_number,
+            ));
+        }
+
+        return Ok(LineType::Posting(posting));
+    }
+
+    Ok(LineType::None)
 }
