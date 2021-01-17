@@ -37,10 +37,14 @@ fn main() {
 
     if let Some(_) = matches.subcommand_matches("print") {
         // let printer = Printer::new();
+        // let path = std::path::PathBuf::from(matches.value_of("file").unwrap());
         let reader = Reader::new(matches.value_of("file").unwrap());
 
         for transaction in reader {
-            println!("{}", transaction.borrow())
+            match transaction {
+                Err(e) => println!("{}", e),
+                Ok(transaction) => println!("{}", transaction.borrow()),
+            }
         }
 
         // printer.report_take(

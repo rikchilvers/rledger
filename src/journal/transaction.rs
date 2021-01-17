@@ -1,6 +1,4 @@
-use super::{
-    amount::Amount, error::Error, posting::Posting, transaction_status::TransactionStatus,
-};
+use super::{posting::Posting, transaction_status::TransactionStatus};
 use std::rc::Rc;
 
 #[derive(Debug)]

@@ -7,6 +7,7 @@ mod include;
 mod payee;
 mod posting;
 mod reader;
+mod source;
 mod transaction_header;
 mod transaction_status;
 mod whitespace;
