@@ -17,14 +17,15 @@ pub enum ParseResult {
 }
 
 pub struct Source {
-    state: ReaderState,
     pub location: PathBuf,
     lines: Lines<std::io::BufReader<std::fs::File>>,
     pub line_number: u64,
-
-    current_transaction: Rc<RefCell<Transaction>>,
-    // We keep track of the current posting so we can add commennts to it
-    current_posting: Option<Posting>,
+    state: ReaderState,
+    // The transaction needs to be RcMut so that multiple postings can hold onto it
+    transaction: Rc<RefCell<Transaction>>,
+    //The posting needs to be optional because in between transactions, we won't have one
+    /// We keep track of the current posting so we can add commennts to it
+    posting: Option<Posting>,
 }
 
 impl Source {
@@ -35,9 +36,10 @@ impl Source {
             location: PathBuf::from(path),
             lines: std::io::BufReader::new(file).lines(),
             line_number: 0,
-            current_transaction: Rc::new(RefCell::new(Transaction::new())),
-            current_posting: None,
             state: ReaderState::None,
+            transaction: Rc::new(RefCell::new(Transaction::new())),
+            // posting: Rc::new(RefCell::new(Posting::new())),
+            posting: None,
         }
     }
 
@@ -54,7 +56,7 @@ impl Source {
                         self.add_posting()?;
                         self.close_current_transaction()?;
                         self.state = ReaderState::None;
-                        return Ok(ParseResult::Transaction(self.current_transaction.clone()));
+                        return Ok(ParseResult::Transaction(Rc::clone(&self.transaction)));
                     }
 
                     // Check for include directive
@@ -76,15 +78,15 @@ impl Source {
                                 self.line_number,
                             ));
                         }
-                        // We might have just read a transaction, so add that to the previous transaction
+                        // We might have just read a posting, so add that to the previous transaction
                         self.add_posting()?;
 
                         // If had a previous transaction, we need to close it now we're starting a new one
                         self.close_current_transaction()?;
-                        let completed_transaction = self.current_transaction.clone();
+                        let completed_transaction = self.transaction.clone();
 
                         self.state = ReaderState::InTransaction;
-                        self.current_transaction =
+                        self.transaction =
                             Rc::new(RefCell::new(Transaction::from_header(transaction_header)));
 
                         return Ok(ParseResult::Transaction(completed_transaction));
@@ -94,14 +96,12 @@ impl Source {
                     // This must come before postings because that lexer will match comments greedily
                     if let Ok((_, comment)) = comment_min(2, &line) {
                         match self.state {
-                            ReaderState::InPosting => match &mut self.current_posting {
-                                Some(p) => {
-                                    p.add_comment(comment.to_owned());
-                                }
-                                None => return Err(ReaderError::MissingPosting(self.line_number)),
-                            },
+                            ReaderState::InPosting => {
+                                println!("");
+                                // self.posting.add_comment(comment.to_owned())
+                            }
                             ReaderState::InTransaction => {
-                                self.current_transaction
+                                self.transaction
                                     .borrow_mut()
                                     .comments
                                     .push(comment.to_owned());
@@ -130,7 +130,7 @@ impl Source {
                         self.add_posting()?;
 
                         self.state = ReaderState::InPosting;
-                        self.current_posting = Some(posting);
+                        self.posting = Some(posting);
 
                         return Ok(ParseResult::SourceIncomplete);
                     }
@@ -142,26 +142,24 @@ impl Source {
     }
 
     fn add_posting(&mut self) -> Result<(), ReaderError> {
-        match self.current_posting.take() {
+        match self.posting.take() {
             None => return Ok(()),
             Some(mut posting) => {
                 if posting.amount.is_none() {
                     if self
-                        .current_transaction
+                        .transaction
                         .borrow()
                         .elided_amount_posting_index
                         .is_some()
                     {
                         return Err(ReaderError::TwoPostingsWithElidedAmounts(self.line_number));
                     }
-                    let index = self.current_transaction.borrow().postings.len();
-                    self.current_transaction
-                        .borrow_mut()
-                        .elided_amount_posting_index = Some(index);
+                    let index = self.transaction.borrow().postings.len();
+                    self.transaction.borrow_mut().elided_amount_posting_index = Some(index);
                 }
 
-                posting.transaction = Some(Rc::downgrade(&self.current_transaction));
-                self.current_transaction
+                posting.transaction = Some(Rc::downgrade(&self.transaction));
+                self.transaction
                     .borrow_mut()
                     .postings
                     .push(Rc::new(posting));
@@ -173,7 +171,7 @@ impl Source {
 
     pub fn close_current_transaction(&self) -> Result<(), ReaderError> {
         let mut sum = 0_i64;
-        for p in self.current_transaction.borrow_mut().postings.iter_mut() {
+        for p in self.transaction.borrow_mut().postings.iter_mut() {
             match &p.amount {
                 Some(a) => sum += a.quantity,
                 None => (),
@@ -186,23 +184,24 @@ impl Source {
 
         // If there is no posting with an elided amount, we can't balance the transaction
         if self
-            .current_transaction
+            .transaction
             .borrow()
             .elided_amount_posting_index
             .is_none()
         {
             // we step up a line here because by this point we've moved past the transaction in
             // question
-            return Err(ReaderError::TransactionDoesNotBalance(1)); // TODO this is the wrong line number
+            return Err(ReaderError::TransactionDoesNotBalance(self.line_number - 1));
+            // TODO this is the wrong line number
         }
 
         let index = self
-            .current_transaction
+            .transaction
             .borrow()
             .elided_amount_posting_index
             .unwrap();
 
-        match Rc::get_mut(&mut self.current_transaction.borrow_mut().postings[index]) {
+        match Rc::get_mut(&mut self.transaction.borrow_mut().postings[index]) {
             None => return Ok(()), // TODO we should probably handle this case
             Some(posting) => {
                 posting.amount = Some(Amount::new(-sum, ""));

@@ -13,6 +13,10 @@ pub struct Posting {
 }
 
 impl Posting {
+    pub fn new() -> Self {
+        Default::default()
+    }
+
     pub fn add_comment(&mut self, comment: String) {
         self.comments.push(comment)
     }
