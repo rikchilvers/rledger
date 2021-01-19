@@ -1,3 +1,4 @@
+use super::source::ParseResult;
 use super::{error::ReaderError, source::Source};
 use crate::journal::transaction::Transaction;
 use std::cell::RefCell;
@@ -24,31 +25,25 @@ impl Iterator for Reader {
     type Item = Result<Rc<RefCell<Transaction>>, ReaderError>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        return None;
-
-        /*
-        let mut source = self.sources.last().unwrap();
-
-        match source.parse_line(&self.state) {
-            None => match self.sources.pop() {
-                None => return None,
-                Some(source) => {
-                    self.current_source = source;
-                    return self.next();
-                }
-            },
-            Some(line) => match line {
+        match &mut self.sources.last_mut() {
+            None => return None,
+            Some(source) => match source.parse_line() {
                 Err(e) => return Some(Err(e)),
-                Ok(line) => match self.process_line(line) {
-                    Err(e) => return Some(Err(e)),
-                    Ok(transaction) => match transaction {
-                        None => return self.next(),
-                        Some(transaction) => return Some(Ok(transaction)),
-                    },
+                Ok(parse_result) => match parse_result {
+                    ParseResult::SourceIncomplete => return self.next(),
+                    ParseResult::SourceComplete => {
+                        self.sources.pop();
+                        return self.next();
+                    }
+                    ParseResult::Transaction(transaction) => return Some(Ok(transaction)),
+                    ParseResult::IncludeDirective(path) => {
+                        println!("would include file: {}\n", path);
+                        // self.sources.push(Source::new(&path));
+                        return self.next();
+                    }
                 },
             },
         }
-        */
     }
 }
 

@@ -4,9 +4,9 @@ mod command;
 mod journal;
 mod print;
 
-use crate::command::Command;
+// use crate::command::Command;
 use crate::journal::Reader;
-use crate::print::Printer;
+// use crate::print::Printer;
 
 use clap::{App, Arg};
 

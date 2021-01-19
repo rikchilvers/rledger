@@ -10,10 +10,9 @@ use std::path::PathBuf;
 use std::rc::Rc;
 
 pub enum ParseResult {
-    None,
+    SourceIncomplete,
     SourceComplete,
     Transaction(Rc<RefCell<Transaction>>),
-    Posting(Posting),
     IncludeDirective(String),
 }
 
@@ -66,7 +65,6 @@ impl Source {
                                 self.line_number,
                             ));
                         }
-                        println!(">> include: {}", include);
                         return Ok(ParseResult::IncludeDirective(include.to_owned()));
                     }
 
@@ -83,12 +81,13 @@ impl Source {
 
                         // If had a previous transaction, we need to close it now we're starting a new one
                         self.close_current_transaction()?;
+                        let completed_transaction = self.current_transaction.clone();
 
                         self.state = ReaderState::InTransaction;
                         self.current_transaction =
                             Rc::new(RefCell::new(Transaction::from_header(transaction_header)));
 
-                        return Ok(ParseResult::Transaction(self.current_transaction.clone()));
+                        return Ok(ParseResult::Transaction(completed_transaction));
                     }
 
                     // Check for comments
@@ -114,6 +113,8 @@ impl Source {
                                 ))
                             }
                         }
+
+                        return Ok(ParseResult::SourceIncomplete);
                     }
 
                     // Check for postings
@@ -131,10 +132,10 @@ impl Source {
                         self.state = ReaderState::InPosting;
                         self.current_posting = Some(posting);
 
-                        return Ok(ParseResult::None);
+                        return Ok(ParseResult::SourceIncomplete);
                     }
 
-                    Ok(ParseResult::None)
+                    Ok(ParseResult::SourceIncomplete)
                 }
             },
         }
