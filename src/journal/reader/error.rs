@@ -5,7 +5,22 @@ pub enum ReaderError {
     TwoPostingsWithElidedAmounts(u64),
     TransactionDoesNotBalance(u64),
     General,
+    // TODO: remove this
     IO(std::io::Error),
+}
+
+impl ReaderError {
+    pub fn change_line_number(&self, new: u64) -> Self {
+        match self {
+            Self::UnexpectedItem(item, _) => ReaderError::UnexpectedItem(item.to_owned(), new),
+            Self::MissingPosting(_) => Self::MissingPosting(new),
+            Self::MissingTransaction(_) => Self::MissingTransaction(new),
+            Self::TwoPostingsWithElidedAmounts(_) => Self::TwoPostingsWithElidedAmounts(new),
+            Self::TransactionDoesNotBalance(_) => Self::TransactionDoesNotBalance(new),
+            Self::General => Self::General,
+            Self::IO(_) => Self::General,
+        }
+    }
 }
 
 impl std::fmt::Display for ReaderError {
