@@ -13,6 +13,8 @@
     Assets:Current
     Expenses:Life:Clothing    £50.00
 
+include test.journal
+
 ;
 ; ---------------------------
 ; DO NOT CHANGE THIS FILE

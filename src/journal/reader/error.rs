@@ -4,6 +4,8 @@ pub enum ReaderError {
     MissingTransaction(u64),
     TwoPostingsWithElidedAmounts(u64),
     TransactionDoesNotBalance(u64),
+    General,
+    IO(std::io::Error),
 }
 
 impl std::fmt::Display for ReaderError {
@@ -21,6 +23,12 @@ impl std::fmt::Display for ReaderError {
             }
             ReaderError::TransactionDoesNotBalance(line) => {
                 write!(f, "Transaction ending on line {} does not balance.", line)
+            }
+            ReaderError::General => {
+                write!(f, "An error occurred")
+            }
+            ReaderError::IO(e) => {
+                write!(f, "An IO error occurred: {:?}", e)
             }
         }
     }
