@@ -31,15 +31,14 @@ fn main() {
         return;
     }
 
+    let reader = Reader::new(matches.value_of("file").unwrap());
+
     if let Some(_) = matches.subcommand_matches("print") {
         let mut printer = Printer::new();
-        let reader = Reader::new(matches.value_of("file").unwrap());
 
-        for transaction in reader {
-            match transaction {
-                Err(e) => println!("{}", e),
-                Ok(transaction) => printer.handle_transaction(transaction),
-            }
+        if let Err(e) = printer.read_transactions(reader) {
+            println!("{}", e);
+            return;
         }
 
         printer.report();

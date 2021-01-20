@@ -12,4 +12,5 @@ mod transaction_header;
 mod transaction_status;
 mod whitespace;
 
+pub use error::ReaderError;
 pub use reader::Reader;

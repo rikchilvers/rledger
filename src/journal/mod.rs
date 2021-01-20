@@ -10,4 +10,5 @@ mod reader;
 pub use amount::Amount;
 pub use posting::Posting;
 pub use reader::Reader;
+pub use reader::ReaderError;
 pub use transaction::Transaction;
