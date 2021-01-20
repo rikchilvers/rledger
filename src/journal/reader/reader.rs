@@ -44,10 +44,6 @@ impl Iterator for Reader {
         match parse_result {
             Err(e) => return Some(Err(e)),
             Ok(parse_result) => match parse_result {
-                ParseResult::SourceIncomplete => {
-                    self.sources.push(source);
-                    return self.next();
-                }
                 ParseResult::SourceComplete => {
                     self.sources.pop();
                     return self.next();

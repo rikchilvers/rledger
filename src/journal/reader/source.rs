@@ -12,7 +12,6 @@ use std::path::PathBuf;
 use std::rc::Rc;
 
 pub enum ParseResult {
-    SourceIncomplete,
     SourceComplete,
     Transaction(Rc<RefCell<Transaction>>),
     IncludeDirective(String),
@@ -32,7 +31,6 @@ impl Source {
         let file = std::fs::File::open(path.clone()).expect(&format!("File not found"));
 
         Self {
-            // location: PathBuf::from(path),
             location: path,
             lines: std::io::BufReader::new(file).lines(),
             line_number: 0,
@@ -55,7 +53,7 @@ impl Source {
                         self.state = ReaderState::None;
 
                         match self.transaction.take() {
-                            None => return Ok(ParseResult::SourceIncomplete),
+                            None => return self.parse_line(),
                             Some(ref transaction) => {
                                 if let Some(posting) = self.posting.take() {
                                     transaction.borrow_mut().add_posting(posting)?;
@@ -109,7 +107,7 @@ impl Source {
                             self.transaction =
                                 Some(Rc::new(RefCell::new(Transaction::from_header(transaction_header))));
 
-                            return Ok(ParseResult::SourceIncomplete);
+                            return self.parse_line();
                         }
                     }
 
@@ -128,7 +126,7 @@ impl Source {
                             _ => return Err(ReaderError::UnexpectedItem("comment".to_owned(), self.line_number)),
                         }
 
-                        return Ok(ParseResult::SourceIncomplete);
+                        return self.parse_line();
                     }
 
                     // Check for postings
@@ -147,10 +145,10 @@ impl Source {
                         posting.transaction = Some(Rc::downgrade(self.transaction.as_ref().unwrap()));
                         self.posting = Some(posting);
 
-                        return Ok(ParseResult::SourceIncomplete);
+                        return self.parse_line();
                     }
 
-                    Ok(ParseResult::SourceIncomplete)
+                    return self.parse_line();
                 }
             },
         }
