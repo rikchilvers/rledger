@@ -167,7 +167,7 @@ impl Transaction {
     }
 
     /// Returns true if the transaction was closed
-    pub fn close(&mut self, line: u64) -> Result<bool, ReaderError> {
+    pub fn close(&mut self, line: u64) -> Result<(), ReaderError> {
         let mut sum = 0_i64;
         for p in self.postings.iter_mut() {
             if let Some(a) = &p.amount {
@@ -176,7 +176,7 @@ impl Transaction {
         }
 
         if sum == 0 {
-            return Ok(true);
+            return Ok(());
         }
 
         // If there is no posting with an elided amount, we can't balance the transaction
@@ -188,11 +188,10 @@ impl Transaction {
         let index = self.elided_amount_posting_index.unwrap();
 
         match Rc::get_mut(&mut self.postings[index]) {
-            None => return Ok(false), // TODO we should probably handle this case
-            Some(posting) => {
-                posting.amount = Some(Amount::new(-sum, ""));
-                Ok(true)
-            }
+            None => return Err(ReaderError::TransactionDoesNotBalance(line)),
+            Some(posting) => posting.amount = Some(Amount::new(-sum, "")),
         }
+
+        Ok(())
     }
 }
