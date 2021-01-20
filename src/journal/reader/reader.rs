@@ -1,9 +1,6 @@
-use super::source::ParseResult;
-use super::{error::ReaderError, source::Source};
+use super::{error::ReaderError, source::ParseResult, source::Source};
 use crate::journal::transaction::Transaction;
-use std::cell::RefCell;
-use std::path::PathBuf;
-use std::rc::Rc;
+use std::{cell::RefCell, collections::HashSet, path::PathBuf, rc::Rc};
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum ReaderState {
@@ -20,6 +17,18 @@ impl Default for ReaderState {
 
 pub struct Reader {
     sources: Vec<Source>,
+    visited_sources: HashSet<String>,
+}
+
+impl Reader {
+    pub fn new(location: &str) -> Self {
+        let mut set = HashSet::new();
+        set.insert(location.to_owned());
+        Self {
+            sources: vec![Source::new(PathBuf::from(location))],
+            visited_sources: set,
+        }
+    }
 }
 
 impl Iterator for Reader {
@@ -48,7 +57,9 @@ impl Iterator for Reader {
                     return Some(Ok(transaction));
                 }
                 ParseResult::IncludeDirective(path) => {
-                    println!("would include file: {}\n", path);
+                    if !self.visited_sources.insert(path.clone()) {
+                        panic!("visited {} already", path);
+                    }
                     match source.location.clone().parent() {
                         None => panic!("no parent"),
                         Some(parent) => {
@@ -88,13 +99,5 @@ impl Iterator for Reader {
             },
         }
         */
-    }
-}
-
-impl Reader {
-    pub fn new(location: &str) -> Self {
-        Self {
-            sources: vec![Source::new(PathBuf::from(location))],
-        }
     }
 }
