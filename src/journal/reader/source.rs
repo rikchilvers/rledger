@@ -44,7 +44,7 @@ impl Source {
         match self.lines.next() {
             None => return Ok(ParseResult::SourceComplete),
             Some(line) => match line {
-                Err(e) => return Err(ReaderError::IO(e)),
+                Err(e) => return Err(ReaderError::IO(e, self.line_number)),
                 Ok(line) => {
                     self.line_number += 1;
 
