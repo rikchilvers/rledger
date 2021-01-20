@@ -4,7 +4,6 @@ pub enum ReaderError {
     MissingTransaction(u64),
     TwoPostingsWithElidedAmounts(u64),
     TransactionDoesNotBalance(u64),
-    General,
     // TODO: remove this
     IO(std::io::Error),
 }
@@ -17,7 +16,6 @@ impl ReaderError {
             Self::MissingTransaction(_) => Self::MissingTransaction(new),
             Self::TwoPostingsWithElidedAmounts(_) => Self::TwoPostingsWithElidedAmounts(new),
             Self::TransactionDoesNotBalance(_) => Self::TransactionDoesNotBalance(new),
-            Self::General => Self::General,
             Self::IO(_) => Self::General,
         }
     }
