@@ -2,7 +2,7 @@ mod account;
 mod amount;
 mod comment;
 mod dates;
-pub mod error;
+mod error;
 mod include;
 mod payee;
 mod posting;

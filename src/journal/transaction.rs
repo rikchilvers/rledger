@@ -1,4 +1,4 @@
-use super::{posting::Posting, transaction_status::TransactionStatus};
+use super::{transaction_status::TransactionStatus, Posting};
 use std::rc::Rc;
 
 #[derive(Debug)]
@@ -9,19 +9,6 @@ pub struct Transaction {
     pub postings: Vec<Rc<Posting>>,
     pub comments: Vec<String>,
     pub elided_amount_posting_index: Option<usize>,
-}
-
-impl Transaction {
-    pub fn new() -> Self {
-        Self {
-            date: time::Date::try_from_ymd(0000, 01, 01).expect("oops"),
-            payee: String::from(""),
-            status: TransactionStatus::NoStatus,
-            postings: vec![],
-            comments: vec![],
-            elided_amount_posting_index: None,
-        }
-    }
 }
 
 impl std::fmt::Display for Transaction {
@@ -46,11 +33,7 @@ impl std::fmt::Display for Transaction {
                 self.date, self.status, self.payee, comments, postings
             )
         } else {
-            write!(
-                f,
-                "{} {} {}\n{}",
-                self.date, self.status, self.payee, postings
-            )
+            write!(f, "{} {} {}\n{}", self.date, self.status, self.payee, postings)
         }
     }
 }

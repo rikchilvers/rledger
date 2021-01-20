@@ -3,7 +3,7 @@ use super::{
     amount::amount_mapped,
     whitespace::{manyspace0, whitespace2},
 };
-use crate::journal::{amount::Amount, posting::Posting};
+use crate::journal::{Amount, Posting};
 
 use nom::{
     combinator::{map_res, opt},

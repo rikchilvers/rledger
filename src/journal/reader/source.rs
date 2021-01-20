@@ -4,7 +4,9 @@ use super::{
 };
 use crate::journal::{amount::Amount, posting::Posting, transaction::Transaction};
 use std::cell::RefCell;
+use std::fs::File;
 use std::io::BufRead;
+use std::io::BufReader;
 use std::io::Lines;
 use std::path::PathBuf;
 use std::rc::Rc;
@@ -18,11 +20,10 @@ pub enum ParseResult {
 
 pub struct Source {
     pub location: PathBuf,
-    lines: Lines<std::io::BufReader<std::fs::File>>,
-    pub line_number: u64,
+    lines: Lines<BufReader<File>>,
+    line_number: u64,
     state: ReaderState,
     transaction: Option<Rc<RefCell<Transaction>>>,
-    /// We keep track of the current posting so we can add commennts to it
     posting: Option<Posting>,
 }
 
