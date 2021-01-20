@@ -40,7 +40,6 @@ impl Source {
         }
     }
 
-    // TODO: Make this an iterator?
     pub fn parse_line(&mut self) -> Result<ParseResult, ReaderError> {
         match self.lines.next() {
             None => return Ok(ParseResult::SourceComplete),
@@ -56,9 +55,9 @@ impl Source {
                             None => return self.parse_line(),
                             Some(ref transaction) => {
                                 if let Some(posting) = self.posting.take() {
-                                    transaction.borrow_mut().add_posting(posting)?;
+                                    transaction.borrow_mut().add_posting(posting, self.line_number - 1)?;
                                 }
-                                transaction.borrow_mut().close()?;
+                                transaction.borrow_mut().close(self.line_number - 1)?;
                                 return Ok(ParseResult::Transaction(Rc::clone(transaction)));
                             }
                         }
@@ -88,15 +87,12 @@ impl Source {
 
                         // We might have just read a posting, so add that to the previous transaction
                         if let Some((transaction, posting)) = self.transaction.as_ref().zip(self.posting.take()) {
-                            transaction.borrow_mut().add_posting(posting)?;
+                            transaction.borrow_mut().add_posting(posting, self.line_number - 1)?;
                         }
 
                         // If had a previous transaction, we need to close it now we're starting a new one
                         if let Some(transaction) = &self.transaction {
-                            transaction
-                                .borrow_mut()
-                                .close()
-                                .map_err(|e| e.change_line_number(self.line_number - 1))?;
+                            transaction.borrow_mut().close(self.line_number - 1)?;
                             let completed_transaction = Rc::clone(transaction);
 
                             self.transaction =
@@ -139,7 +135,7 @@ impl Source {
                         // If we're already in a posting, we need to add it to the current transaction
                         // We haven't done this already because we might need to add following comments first
                         if let Some((transaction, posting)) = self.transaction.as_ref().zip(self.posting.take()) {
-                            transaction.borrow_mut().add_posting(posting)?;
+                            transaction.borrow_mut().add_posting(posting, self.line_number - 1)?;
                         }
 
                         posting.transaction = Some(Rc::downgrade(self.transaction.as_ref().unwrap()));
@@ -156,10 +152,10 @@ impl Source {
 }
 
 impl Transaction {
-    fn add_posting(&mut self, posting: Posting) -> Result<(), ReaderError> {
+    fn add_posting(&mut self, posting: Posting, line: u64) -> Result<(), ReaderError> {
         if posting.amount.is_none() {
             if self.elided_amount_posting_index.is_some() {
-                return Err(ReaderError::TwoPostingsWithElidedAmounts(0));
+                return Err(ReaderError::TwoPostingsWithElidedAmounts(line));
             }
             let index = self.postings.len();
             self.elided_amount_posting_index = Some(index);
@@ -171,7 +167,7 @@ impl Transaction {
     }
 
     /// Returns true if the transaction was closed
-    pub fn close(&mut self) -> Result<bool, ReaderError> {
+    pub fn close(&mut self, line: u64) -> Result<bool, ReaderError> {
         let mut sum = 0_i64;
         for p in self.postings.iter_mut() {
             if let Some(a) = &p.amount {
@@ -186,7 +182,7 @@ impl Transaction {
         // If there is no posting with an elided amount, we can't balance the transaction
         if self.elided_amount_posting_index.is_none() {
             // we step up a line here because by this point we've moved past the transaction in question
-            return Err(ReaderError::TransactionDoesNotBalance(0));
+            return Err(ReaderError::TransactionDoesNotBalance(line));
         }
 
         let index = self.elided_amount_posting_index.unwrap();

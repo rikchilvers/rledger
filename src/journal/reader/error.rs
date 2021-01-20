@@ -4,21 +4,7 @@ pub enum ReaderError {
     MissingTransaction(u64),
     TwoPostingsWithElidedAmounts(u64),
     TransactionDoesNotBalance(u64),
-    // TODO: remove this
     IO(std::io::Error),
-}
-
-impl ReaderError {
-    pub fn change_line_number(&self, new: u64) -> Self {
-        match self {
-            Self::UnexpectedItem(item, _) => ReaderError::UnexpectedItem(item.to_owned(), new),
-            Self::MissingPosting(_) => Self::MissingPosting(new),
-            Self::MissingTransaction(_) => Self::MissingTransaction(new),
-            Self::TwoPostingsWithElidedAmounts(_) => Self::TwoPostingsWithElidedAmounts(new),
-            Self::TransactionDoesNotBalance(_) => Self::TransactionDoesNotBalance(new),
-            Self::IO(_) => Self::General,
-        }
-    }
 }
 
 impl std::fmt::Display for ReaderError {
@@ -36,9 +22,6 @@ impl std::fmt::Display for ReaderError {
             }
             ReaderError::TransactionDoesNotBalance(line) => {
                 write!(f, "Transaction ending on line {} does not balance.", line)
-            }
-            ReaderError::General => {
-                write!(f, "An error occurred")
             }
             ReaderError::IO(e) => {
                 write!(f, "An IO error occurred: {:?}", e)
