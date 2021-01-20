@@ -67,33 +67,5 @@ impl Iterator for Reader {
                 }
             },
         }
-
-        // return None;
-        /*
-        match self.sources.last_mut() {
-            None => return None,
-            Some(source) => match source.parse_line() {
-                Err(e) => return Some(Err(e)),
-                Ok(parse_result) => match parse_result {
-                    ParseResult::SourceIncomplete => return self.next(),
-                    ParseResult::SourceComplete => {
-                        self.sources.pop();
-                        return self.next();
-                    }
-                    ParseResult::Transaction(transaction) => return Some(Ok(transaction)),
-                    ParseResult::IncludeDirective(path) => {
-                        println!("would include file: {}\n", path);
-                        match source.location.parent() {
-                            None => panic!("no parent"),
-                            Some(parent) => {
-                                self.sources.push(Source::new(parent.join(path)));
-                            }
-                        }
-                        return self.next();
-                    }
-                },
-            },
-        }
-        */
     }
 }
