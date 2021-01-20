@@ -26,9 +26,7 @@ impl std::fmt::Display for Amount {
 }
 
 pub fn amount_mapped(i: &str) -> IResult<&str, Amount> {
-    map_res::<_, _, _, _, nom::error::Error<&str>, _, _>(amount, |a: (f64, Option<&str>)| {
-        Ok(Amount::from(a))
-    })(i)
+    map_res::<_, _, _, _, nom::error::Error<&str>, _, _>(amount, |a: (f64, Option<&str>)| Ok(Amount::from(a)))(i)
 }
 
 pub fn amount(i: &str) -> IResult<&str, (f64, Option<&str>)> {
@@ -85,10 +83,7 @@ mod tests {
             quantity: 3400,
         };
 
-        assert_eq!(
-            amount_mapped("34€ ; a comment"),
-            Ok(("; a comment", expected))
-        );
+        assert_eq!(amount_mapped("34€ ; a comment"), Ok(("; a comment", expected)));
     }
 
     #[test]
@@ -109,20 +104,14 @@ mod tests {
         assert_eq!(amount("42USD"), Ok(("", (42.0, Some("USD")))));
         assert_eq!(amount("81 USD"), Ok(("", (81.0, Some(" USD")))));
         assert_eq!(amount("55.34USD"), Ok(("", (55.34, Some("USD")))));
-        assert_eq!(
-            amount("84 USD ; a comment"),
-            Ok(("; a comment", (84.0, Some(" USD "))))
-        );
+        assert_eq!(amount("84 USD ; a comment"), Ok(("; a comment", (84.0, Some(" USD ")))));
     }
 
     #[test]
     fn it_matches_commodities_before_a_number() {
         assert_eq!(amount("£42"), Ok(("", (42.0, Some("£")))));
         assert_eq!(amount("£42.01"), Ok(("", (42.01, Some("£")))));
-        assert_eq!(
-            amount("£ 42 ; a comment"),
-            Ok((" ; a comment", (42.0, Some("£ "))))
-        );
+        assert_eq!(amount("£ 42 ; a comment"), Ok((" ; a comment", (42.0, Some("£ ")))));
     }
 
     #[test]
@@ -143,10 +132,7 @@ mod tests {
     fn it_fails_with_no_sign() {
         assert_eq!(
             sign("42"),
-            Err(nom::Err::Error(nom::error::Error::new(
-                "42",
-                ErrorKind::Tag
-            )))
+            Err(nom::Err::Error(nom::error::Error::new("42", ErrorKind::Tag)))
         );
     }
 }

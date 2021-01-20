@@ -12,10 +12,7 @@ use nom::{
 pub fn whitespace2(i: &str) -> IResult<&str, u8> {
     value(
         2,
-        terminated(
-            many1(alt((tag("  "), tag("\t"), tag(" \t")))),
-            many0(tag(" ")),
-        ),
+        terminated(many1(alt((tag("  "), tag("\t"), tag(" \t")))), many0(tag(" "))),
     )(i)
 }
 

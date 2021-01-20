@@ -1,7 +1,4 @@
-use nom::{
-    bytes::complete::tag, character::complete::space1, combinator::rest, sequence::preceded,
-    IResult,
-};
+use nom::{bytes::complete::tag, character::complete::space1, combinator::rest, sequence::preceded, IResult};
 
 pub fn include(i: &str) -> IResult<&str, &str> {
     preceded(preceded(tag("include"), space1), rest)(i)

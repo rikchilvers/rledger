@@ -25,25 +25,16 @@ mod tests {
 
     #[test]
     fn it_handles_cleared() {
-        assert_eq!(
-            transaction_status("*"),
-            Ok(("", Some(TransactionStatus::Cleared)))
-        );
+        assert_eq!(transaction_status("*"), Ok(("", Some(TransactionStatus::Cleared))));
     }
 
     #[test]
     fn it_handles_uncleared() {
-        assert_eq!(
-            transaction_status("!"),
-            Ok(("", Some(TransactionStatus::Uncleared)))
-        );
+        assert_eq!(transaction_status("!"), Ok(("", Some(TransactionStatus::Uncleared))));
     }
 
     #[test]
     fn it_handles_none() {
-        assert_eq!(
-            transaction_status("something else"),
-            Ok(("something else", None))
-        );
+        assert_eq!(transaction_status("something else"), Ok(("something else", None)));
     }
 }

@@ -19,21 +19,12 @@ mod tests {
     #[test]
     fn it_finds_payees() {
         assert_eq!(payee(""), Ok(("", "")));
-        assert_eq!(
-            payee("a really long payee"),
-            Ok(("", "a really long payee"))
-        );
+        assert_eq!(payee("a really long payee"), Ok(("", "a really long payee")));
     }
 
     #[test]
     fn it_finds_payees_before_comments() {
-        assert_eq!(
-            payee("the payee ; a comment"),
-            Ok(("; a comment", "the payee "))
-        );
-        assert_eq!(
-            payee("the payee; a comment"),
-            Ok(("; a comment", "the payee"))
-        );
+        assert_eq!(payee("the payee ; a comment"), Ok(("; a comment", "the payee ")));
+        assert_eq!(payee("the payee; a comment"), Ok(("; a comment", "the payee")));
     }
 }
