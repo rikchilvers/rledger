@@ -9,21 +9,13 @@ pub struct Printer {
 
 impl Printer {
     pub fn new() -> Self {
-        Self {
-            transactions: vec![],
-        }
-    }
-
-    pub fn report_take(&self, transactions: &Vec<Rc<RefCell<Transaction>>>) {
-        for transaction in transactions.iter() {
-            println!("{}", transaction.borrow());
-        }
+        Self { transactions: vec![] }
     }
 }
 
 impl Command for Printer {
     fn handle_transaction(&mut self, transaction: Rc<RefCell<Transaction>>) {
-        // self.transactions.push(transaction);
+        self.transactions.push(transaction);
     }
 
     fn report(&self) {

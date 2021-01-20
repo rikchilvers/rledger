@@ -4,9 +4,9 @@ mod command;
 mod journal;
 mod print;
 
-// use crate::command::Command;
+use crate::command::Command;
 use crate::journal::Reader;
-// use crate::print::Printer;
+use crate::print::Printer;
 
 use clap::{App, Arg};
 
@@ -23,11 +23,7 @@ fn main() {
                 .env("LEDGER_FILE")
                 .value_name("LEDGER_FILE"),
         )
-        .subcommand(
-            App::new("print")
-                .about("Show transaction entries.")
-                .alias("p"),
-        )
+        .subcommand(App::new("print").about("Show transaction entries.").alias("p"))
         .get_matches();
 
     if matches.value_of("file").is_none() && matches.occurrences_of("file") == 0 {
@@ -36,22 +32,16 @@ fn main() {
     }
 
     if let Some(_) = matches.subcommand_matches("print") {
-        // let printer = Printer::new();
-        // let path = std::path::PathBuf::from(matches.value_of("file").unwrap());
+        let mut printer = Printer::new();
         let reader = Reader::new(matches.value_of("file").unwrap());
 
         for transaction in reader {
             match transaction {
                 Err(e) => println!("{}", e),
-                Ok(transaction) => println!("{}", transaction.borrow()),
+                Ok(transaction) => printer.handle_transaction(transaction),
             }
         }
 
-        // printer.report_take(
-        //     reader
-        //         .read(matches.value_of("file").unwrap())
-        //         .unwrap_or(&vec![]),
-        // );
-        // drop(reader); // this is necessary but perhaps it means there's a better way?
+        printer.report();
     }
 }
