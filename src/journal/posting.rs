@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::rc::Weak;
 
 use super::amount::Amount;
-use super::transaction::Transaction;
+use super::Transaction;
 
 #[derive(Debug, Default)]
 pub struct Posting {
