@@ -27,11 +27,12 @@ pub struct Source {
 }
 
 impl Source {
-    pub fn new(path: &str) -> Self {
-        let file = std::fs::File::open(path).expect(&format!("File not found: {}", path));
+    pub fn new(path: PathBuf) -> Self {
+        let file = std::fs::File::open(path.clone()).expect(&format!("File not found"));
 
         Self {
-            location: PathBuf::from(path),
+            // location: PathBuf::from(path),
+            location: path,
             lines: std::io::BufReader::new(file).lines(),
             line_number: 0,
             state: ReaderState::None,
@@ -120,12 +121,8 @@ impl Source {
                                 Some(posting) => posting.add_comment(comment.to_owned()),
                             },
                             ReaderState::InTransaction => match &self.transaction {
-                                None => {
-                                    return Err(ReaderError::MissingTransaction(self.line_number));
-                                }
-                                Some(transaction) => {
-                                    transaction.borrow_mut().comments.push(comment.to_owned());
-                                }
+                                None => return Err(ReaderError::MissingTransaction(self.line_number)),
+                                Some(transaction) => transaction.borrow_mut().comments.push(comment.to_owned()),
                             },
                             _ => return Err(ReaderError::UnexpectedItem("comment".to_owned(), self.line_number)),
                         }
