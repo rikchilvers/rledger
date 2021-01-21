@@ -1,30 +1,35 @@
 use nom::{
     character::complete::{digit1, one_of},
     combinator::{map_res, opt, recognize},
-    sequence::preceded,
+    sequence::{preceded, tuple},
     IResult,
 };
+use std::convert::TryFrom;
 
 pub fn date(i: &str) -> IResult<&str, time::Date> {
-    let (i, year) = digit_many(i)?;
+    map_res(
+        tuple((
+            digit_many,
+            opt(preceded(one_of("/-."), digit_many)),
+            opt(preceded(one_of("/-."), digit_many)),
+        )),
+        |parsed: (i32, Option<i32>, Option<i32>)| {
+            let component_two = parsed.1.and_then(|c| u8::try_from(c).ok());
+            let component_three = parsed.2.and_then(|c| u8::try_from(c).ok());
+            match (component_two, component_three) {
+                // Only one date component provided
+                (None, None) => time::Date::try_from_ymd(parsed.0, 1, 1),
 
-    let (i, maybe_month) = opt(preceded(one_of("/-."), digit_many))(i)?;
-    if let Some(month) = maybe_month {
-        let (i, maybe_day) = opt(preceded(one_of("/-."), digit_many))(i)?;
-        if let Some(day) = maybe_day {
-            // TODO remove this unwrap
-            let date = time::Date::try_from_ymd(year, month as u8, day as u8).unwrap();
-            return Ok((i, date));
-        }
+                // Only two date components provided
+                (Some(a), None) => time::Date::try_from_ymd(parsed.0, a, 1),
 
-        // TODO remove this unwrap
-        let date = time::Date::try_from_ymd(year, month as u8, 01).unwrap();
-        return Ok((i, date));
-    }
+                // All three date components provided
+                (Some(a), Some(b)) => time::Date::try_from_ymd(parsed.0, a, b),
 
-    // TODO remove this unwrap
-    let date = time::Date::try_from_ymd(year, 01, 01).unwrap();
-    Ok((i, date))
+                (None, Some(_)) => panic!("how did this happen?"),
+            }
+        },
+    )(i)
 }
 
 fn digit_many(i: &str) -> IResult<&str, i32> {
