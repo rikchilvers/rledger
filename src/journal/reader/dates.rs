@@ -41,13 +41,19 @@ mod tests {
     use super::*;
 
     #[test]
-    fn it_finds_the_date() {
+    fn it_finds_y() {
         assert_eq!(date("2021"), Ok(("", time::date!(2021 - 01 - 01))));
         assert_eq!(date("2021/"), Ok(("/", time::date!(2021 - 01 - 01))));
+    }
 
+    #[test]
+    fn it_finds_ym() {
         assert_eq!(date("2021-11"), Ok(("", time::date!(2021 - 11 - 01))));
         assert_eq!(date("2021-11/"), Ok(("/", time::date!(2021 - 11 - 01))));
+    }
 
+    #[test]
+    fn it_finds_ymd() {
         assert_eq!(date("2021-01/21"), Ok(("", time::date!(2021 - 01 - 21))));
         assert_eq!(date("2021.01.21/"), Ok(("/", time::date!(2021 - 01 - 21))));
     }
