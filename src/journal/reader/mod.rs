@@ -1,3 +1,5 @@
+extern crate time;
+
 mod account;
 mod amount;
 mod comment;

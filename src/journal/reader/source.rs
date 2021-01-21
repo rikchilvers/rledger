@@ -1,6 +1,6 @@
 use super::{
-    comment::*, error::ReaderError, include::include, posting::posting, reader::ReaderState,
-    transaction_header::transaction_header,
+    comment::*, error::ReaderError, include::include, periodic_transaction::periodic_transaction_header,
+    posting::posting, reader::ReaderState, transaction_header::transaction_header,
 };
 use crate::journal::{amount::Amount, posting::Posting, transaction::Transaction};
 use std::cell::RefCell;
@@ -74,6 +74,9 @@ impl Source {
 
                         return Ok(ParseResult::IncludeDirective(include.to_owned()));
                     }
+
+                    // Check for period transaction header
+                    if let Ok((_, period_transaction_header)) = periodic_transaction_header(&line) {}
 
                     // Check for transaction header
                     if let Ok((_, transaction_header)) = transaction_header(&line) {

@@ -12,14 +12,17 @@ pub fn date(i: &str) -> IResult<&str, time::Date> {
     if let Some(month) = maybe_month {
         let (i, maybe_day) = opt(preceded(one_of("/-."), digit_many))(i)?;
         if let Some(day) = maybe_day {
+            // TODO remove this unwrap
             let date = time::Date::try_from_ymd(year, month as u8, day as u8).unwrap();
             return Ok((i, date));
         }
 
+        // TODO remove this unwrap
         let date = time::Date::try_from_ymd(year, month as u8, 01).unwrap();
         return Ok((i, date));
     }
 
+    // TODO remove this unwrap
     let date = time::Date::try_from_ymd(year, 01, 01).unwrap();
     Ok((i, date))
 }
