@@ -1,6 +1,7 @@
 use super::{
-    comment::*, error::ReaderError, include::include, periodic_transaction::periodic_transaction_header,
-    posting::posting, reader::ReaderState, transaction_header::transaction_header,
+    comment::*, error::LineType, error::ReaderError, include::include,
+    periodic_transaction::periodic_transaction_header, posting::posting, reader::ReaderState,
+    transaction_header::transaction_header,
 };
 use crate::journal::{
     amount::Amount, periodic_transaction::PeriodicTransaction, posting::Posting, transaction::Transaction,
@@ -44,6 +45,21 @@ impl Source {
         }
     }
 
+    // Nom provides 3 types of non-success:
+    // - Incomplete: the parser needed more data
+    // - Error: the parser failed but another might not
+    // - Failure: the data is invalid
+    // For our case, we're likely to receive lots of Errors. These might not
+    fn handle_parse<T>(&self, line_type: LineType, line: nom::IResult<&str, T>) -> Result<Option<T>, ReaderError> {
+        match line {
+            Ok(r) => Ok(Some(r.1)),
+            Err(e) => match e {
+                nom::Err::Error(_) => return Ok(None),
+                _ => return Err(ReaderError::Parse(line_type, self.line_number)),
+            },
+        }
+    }
+
     pub fn parse_line(&mut self) -> Result<ParseResult, ReaderError> {
         match self.lines.next() {
             None => return Ok(ParseResult::SourceComplete),
@@ -68,22 +84,57 @@ impl Source {
                     }
 
                     // Check for include directive
-                    if let Ok((_, include)) = include(&line) {
-                        if self.state != ReaderState::None {
-                            return Err(ReaderError::UnexpectedItem(
-                                "include directive".to_owned(),
-                                self.line_number,
-                            ));
-                        }
+                    /*
+                    match include(&line) {
+                        Ok((_, include)) => {
+                            if self.state != ReaderState::None {
+                                return Err(ReaderError::UnexpectedItem(
+                                    LineType::IncludeDirective,
+                                    self.line_number,
+                                ));
+                            }
 
-                        return Ok(ParseResult::IncludeDirective(include.to_owned()));
+                            return Ok(ParseResult::IncludeDirective(include.to_owned()));
+                        }
+                        Err(e) => {
+                            if let err = nom::Err::Error(e) {
+                                if err.input.len() != line.len() {
+                                    println!("failed to parse include");
+                                }
+                            }
+                        }
+                        Err(e) => match e {
+                            nom::Err::Error(e) => {
+                                if e.input.len() != line.len() {
+                                    println!("failed to parse include");
+                                }
+                            }
+                            _ => {}
+                        },
+                    }
+                    */
+                    match self.handle_parse(LineType::IncludeDirective, include(&line)) {
+                        Err(e) => return Err(e),
+                        Ok(include) => match include {
+                            None => {}
+                            Some(include) => {
+                                if self.state != ReaderState::None {
+                                    return Err(ReaderError::UnexpectedItem(
+                                        LineType::IncludeDirective,
+                                        self.line_number,
+                                    ));
+                                }
+
+                                return Ok(ParseResult::IncludeDirective(include.to_owned()));
+                            }
+                        },
                     }
 
                     // Check for period transaction header
                     if let Ok((_, period)) = periodic_transaction_header(&line) {
                         if self.state != ReaderState::None {
                             return Err(ReaderError::UnexpectedItem(
-                                "periodic transaction header".to_owned(),
+                                LineType::PeriodidTransactionHeader,
                                 self.line_number,
                             ));
                         }
@@ -113,7 +164,7 @@ impl Source {
                     if let Ok((_, transaction_header)) = transaction_header(&line) {
                         if self.state != ReaderState::None {
                             return Err(ReaderError::UnexpectedItem(
-                                "transaction header".to_owned(),
+                                LineType::TransactionHeader,
                                 self.line_number,
                             ));
                         }
@@ -153,7 +204,7 @@ impl Source {
                                 None => return Err(ReaderError::MissingTransaction(self.line_number)),
                                 Some(transaction) => transaction.borrow_mut().comments.push(comment.to_owned()),
                             },
-                            _ => return Err(ReaderError::UnexpectedItem("comment".to_owned(), self.line_number)),
+                            _ => return Err(ReaderError::UnexpectedItem(LineType::Comment, self.line_number)),
                         }
 
                         return self.parse_line();
@@ -162,7 +213,7 @@ impl Source {
                     // Check for postings
                     if let Ok((_, mut posting)) = posting(&line) {
                         if self.state == ReaderState::None {
-                            return Err(ReaderError::UnexpectedItem("posting".to_owned(), self.line_number));
+                            return Err(ReaderError::UnexpectedItem(LineType::Posting, self.line_number));
                         }
                         self.state = ReaderState::InPosting;
 

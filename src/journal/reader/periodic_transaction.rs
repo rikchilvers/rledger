@@ -31,9 +31,9 @@ type PHeader = (
 );
 
 impl TryFrom<PHeader> for Period {
-    type Error = ReaderError;
+    type Error = nom::error::Error<()>;
 
-    fn try_from(header: PHeader) -> Result<Self, ReaderError> {
+    fn try_from(header: PHeader) -> Result<Self, nom::error::Error<()>> {
         let mut period = Period::default();
         period.interval = header.0;
 
@@ -55,10 +55,10 @@ impl TryFrom<PHeader> for Period {
                     period.end_date = Some(final_date(date, source));
                 }
 
-                (None, Some(_)) => return Err(ReaderError::Parse),
+                (None, Some(_)) => return Err(nom::error::Error::new((), nom::error::ErrorKind::ParseTo)),
 
                 // Two directions
-                (Some(_), Some(_)) => return Err(ReaderError::Parse),
+                (Some(_), Some(_)) => return Err(nom::error::Error::new((), nom::error::ErrorKind::ParseTo)),
 
                 // Only in
                 (Some(Direction::In), None) => {
