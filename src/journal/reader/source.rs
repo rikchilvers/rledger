@@ -2,7 +2,9 @@ use super::{
     comment::*, error::ReaderError, include::include, periodic_transaction::periodic_transaction_header,
     posting::posting, reader::ReaderState, transaction_header::transaction_header,
 };
-use crate::journal::{amount::Amount, posting::Posting, transaction::Transaction};
+use crate::journal::{
+    amount::Amount, periodic_transaction::PeriodicTransaction, posting::Posting, transaction::Transaction,
+};
 use std::cell::RefCell;
 use std::fs::File;
 use std::io::BufRead;
@@ -22,6 +24,7 @@ pub struct Source {
     lines: Lines<BufReader<File>>,
     line_number: u64,
     state: ReaderState,
+    periodic_transaction: Option<PeriodicTransaction>,
     transaction: Option<Rc<RefCell<Transaction>>>,
     posting: Option<Posting>,
 }
@@ -35,6 +38,7 @@ impl Source {
             lines: std::io::BufReader::new(file).lines(),
             line_number: 0,
             state: ReaderState::None,
+            periodic_transaction: None,
             transaction: None,
             posting: None,
         }
@@ -76,7 +80,34 @@ impl Source {
                     }
 
                     // Check for period transaction header
-                    if let Ok((_, period_transaction_header)) = periodic_transaction_header(&line) {}
+                    if let Ok((_, period)) = periodic_transaction_header(&line) {
+                        if self.state != ReaderState::None {
+                            return Err(ReaderError::UnexpectedItem(
+                                "periodic transaction header".to_owned(),
+                                self.line_number,
+                            ));
+                        }
+                        self.state = ReaderState::InPeriodicTransaction;
+
+                        println!("{:?}", period);
+
+                        // We might have just read a posting, so add that to the previous transaction
+                        // TODO this could be merged with the if let below
+                        if let Some((transaction, posting)) = self.transaction.as_ref().zip(self.posting.take()) {
+                            transaction.borrow_mut().add_posting(posting, self.line_number - 1)?;
+                        }
+
+                        // If we had a previous transaction, we need to close it now we're starting a new one
+                        if let Some(transaction) = &self.transaction.take() {
+                            transaction.borrow_mut().close(self.line_number - 1)?;
+                            let completed_transaction = Rc::clone(transaction);
+                            self.transaction = Some(Rc::new(RefCell::new(Transaction::new())));
+                            return Ok(ParseResult::Transaction(completed_transaction));
+                        } else {
+                            self.transaction = Some(Rc::new(RefCell::new(Transaction::new())));
+                            return self.parse_line();
+                        }
+                    }
 
                     // Check for transaction header
                     if let Ok((_, transaction_header)) = transaction_header(&line) {
@@ -93,7 +124,7 @@ impl Source {
                             transaction.borrow_mut().add_posting(posting, self.line_number - 1)?;
                         }
 
-                        // If had a previous transaction, we need to close it now we're starting a new one
+                        // If we had a previous transaction, we need to close it now we're starting a new one
                         if let Some(transaction) = &self.transaction {
                             transaction.borrow_mut().close(self.line_number - 1)?;
                             let completed_transaction = Rc::clone(transaction);

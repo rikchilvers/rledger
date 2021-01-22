@@ -6,6 +6,7 @@ use std::{cell::RefCell, collections::HashSet, path::PathBuf, rc::Rc};
 pub enum ReaderState {
     None,
     InTransaction,
+    InPeriodicTransaction,
     InPosting,
 }
 

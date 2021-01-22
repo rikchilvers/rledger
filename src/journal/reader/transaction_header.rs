@@ -11,7 +11,7 @@ pub fn transaction_header(i: &str) -> IResult<&str, TransactionHeader> {
     let (i, maybe_comment) = opt(comment)(i)?;
     if let Some(comment) = maybe_comment {
         let th = TransactionHeader {
-            date,
+            date: date.0,
             status: TransactionStatus::NoStatus,
             payee: "".to_owned(),
             comment: Some(comment.to_owned()),
@@ -25,7 +25,7 @@ pub fn transaction_header(i: &str) -> IResult<&str, TransactionHeader> {
     let (i, maybe_comment) = opt(comment)(i)?;
     if let Some(comment) = maybe_comment {
         let th = TransactionHeader {
-            date,
+            date: date.0,
             status,
             payee: "".to_owned(),
             comment: Some(comment.to_owned()),
@@ -39,7 +39,7 @@ pub fn transaction_header(i: &str) -> IResult<&str, TransactionHeader> {
     let (i, maybe_comment) = opt(comment)(i)?;
     if let Some(comment) = maybe_comment {
         let th = TransactionHeader {
-            date,
+            date: date.0,
             status,
             payee: trimmed_payee,
             comment: Some(comment.to_owned()),
@@ -48,7 +48,7 @@ pub fn transaction_header(i: &str) -> IResult<&str, TransactionHeader> {
     }
 
     let th = TransactionHeader {
-        date,
+        date: date.0,
         status,
         payee: trimmed_payee,
         comment: None,

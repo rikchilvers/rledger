@@ -5,6 +5,7 @@ pub enum ReaderError {
     TwoPostingsWithElidedAmounts(u64),
     TransactionDoesNotBalance(u64),
     IO(std::io::Error, u64),
+    Parse,
 }
 
 impl std::fmt::Display for ReaderError {
@@ -25,6 +26,9 @@ impl std::fmt::Display for ReaderError {
             }
             ReaderError::IO(e, line) => {
                 write!(f, "An IO error occurred on line {}: {:?}", line, e)
+            }
+            ReaderError::Parse => {
+                write!(f, "A parsing error occurred")
             }
         }
     }

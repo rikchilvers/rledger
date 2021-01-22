@@ -11,6 +11,19 @@ pub struct Transaction {
     pub elided_amount_posting_index: Option<usize>,
 }
 
+impl Transaction {
+    pub fn new() -> Self {
+        Self {
+            date: time::Date::try_from_ymd(2020, 01, 01).unwrap(),
+            payee: String::from(""),
+            status: TransactionStatus::NoStatus,
+            postings: vec![],
+            comments: vec![],
+            elided_amount_posting_index: None,
+        }
+    }
+}
+
 impl std::fmt::Display for Transaction {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut comments: Option<String> = None;

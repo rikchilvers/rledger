@@ -1,4 +1,4 @@
-use super::dates::date;
+use super::dates::{date, DateSource};
 use super::ReaderError;
 use crate::journal::periodic_transaction::Period;
 use crate::journal::periodic_transaction::PeriodInterval;
@@ -25,9 +25,9 @@ enum Direction {
 type PHeader = (
     Option<PeriodInterval>,
     Option<Direction>,
-    Option<time::Date>,
+    Option<(time::Date, DateSource)>,
     Option<Direction>,
-    Option<time::Date>,
+    Option<(time::Date, DateSource)>,
 );
 
 impl TryFrom<PHeader> for Period {
@@ -42,27 +42,28 @@ impl TryFrom<PHeader> for Period {
             (None, None) => {}
 
             // Two dates
-            (Some(_), Some(_)) => {
-                period.start_date = header.2;
-                period.end_date = header.4;
+            (Some((start_date, _)), Some((end_date, _))) => {
+                period.start_date = Some(start_date);
+                period.end_date = Some(end_date);
             }
 
-            // First date
-            (Some(date), None) => match (header.1, header.3) {
+            // One date
+            (Some((date, source)), None) | (None, Some((date, source))) => match (header.1, header.3) {
                 // No directions
                 (None, None) => {
-                    panic!("should interpret one date + no direction as 'in'");
+                    period.start_date = Some(date);
+                    period.end_date = Some(final_date(date, source));
                 }
 
+                (None, Some(_)) => return Err(ReaderError::Parse),
+
                 // Two directions
-                (Some(_), Some(_)) => {
-                    panic!("can't handle two directions with only one date")
-                }
+                (Some(_), Some(_)) => return Err(ReaderError::Parse),
 
                 // Only in
                 (Some(Direction::In), None) => {
                     period.start_date = Some(date);
-                    // period.end_date = date.with_time
+                    period.end_date = Some(final_date(date, source));
                 }
 
                 // Only from
@@ -71,45 +72,26 @@ impl TryFrom<PHeader> for Period {
                 }
 
                 // Only to
+                // TODO: should this be inclusive or exclusive?
                 (Some(Direction::To), None) => {
                     period.end_date = Some(date);
                 }
-
-                _ => todo!(),
-            },
-
-            // Second date
-            (None, Some(date)) => match (header.1, header.3) {
-                // No directions
-                (None, None) => {
-                    panic!("should interpret one date + no direction as 'in'");
-                }
-
-                // Two directions
-                (Some(_), Some(_)) => {
-                    panic!("can't handle two directions with only one date")
-                }
-
-                // Only in
-                (Some(Direction::In), None) | (None, Some(Direction::In)) => {
-                    period.start_date = Some(date);
-                }
-
-                // Only from
-                (Some(Direction::From), None) => {
-                    period.start_date = Some(date);
-                }
-
-                // Only to
-                (Some(Direction::To), None) | (None, Some(Direction::To)) => {
-                    period.end_date = Some(date);
-                }
-
-                _ => todo!(),
             },
         }
 
         return Ok(period);
+    }
+}
+
+fn final_date(date: time::Date, source: DateSource) -> time::Date {
+    match source {
+        DateSource::Year => {
+            return time::Date::try_from_ymd(date.year() + 1, 1, 1).unwrap() - time::Duration::day();
+        }
+        DateSource::YearMonth => {
+            return time::Date::try_from_ymd(date.year(), date.month() + 1, 1).unwrap() - time::Duration::day();
+        }
+        DateSource::YearMonthDay => date,
     }
 }
 
@@ -170,6 +152,7 @@ mod tests {
 
     #[test]
     fn it_matches_inferred_in_periods() {
+        // Y
         let start_date = Some(time::Date::try_from_ymd(2009, 1, 1).unwrap());
         let end_date = Some(time::Date::try_from_ymd(2009, 12, 31).unwrap());
         let period = Period {
@@ -182,6 +165,38 @@ mod tests {
         let expected = Ok(("", period));
 
         let input = "2009";
+        let output = period_expression(input);
+        assert_eq!(output, expected);
+
+        // YM
+        let start_date = Some(time::Date::try_from_ymd(2009, 1, 1).unwrap());
+        let end_date = Some(time::Date::try_from_ymd(2009, 1, 31).unwrap());
+        let period = Period {
+            start_date,
+            end_date,
+            interval: None,
+            frequency: 0,
+        };
+
+        let expected = Ok(("", period));
+
+        let input = "2009-01";
+        let output = period_expression(input);
+        assert_eq!(output, expected);
+
+        // YMD
+        let start_date = Some(time::Date::try_from_ymd(2009, 1, 1).unwrap());
+        let end_date = Some(time::Date::try_from_ymd(2009, 1, 1).unwrap());
+        let period = Period {
+            start_date,
+            end_date,
+            interval: None,
+            frequency: 0,
+        };
+
+        let expected = Ok(("", period));
+
+        let input = "2009-01-01";
         let output = period_expression(input);
         assert_eq!(output, expected);
     }
