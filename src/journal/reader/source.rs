@@ -45,21 +45,6 @@ impl Source {
         }
     }
 
-    // Nom provides 3 types of non-success:
-    // - Incomplete: the parser needed more data
-    // - Error: the parser failed but another might not
-    // - Failure: the data is invalid
-    // For our case, we're likely to receive lots of Errors. These might not
-    fn handle_parse<T>(&self, line_type: LineType, line: nom::IResult<&str, T>) -> Result<Option<T>, ReaderError> {
-        match line {
-            Ok(r) => Ok(Some(r.1)),
-            Err(e) => match e {
-                nom::Err::Error(_) => return Ok(None),
-                _ => return Err(ReaderError::Parse(line_type, self.line_number)),
-            },
-        }
-    }
-
     pub fn parse_line(&mut self) -> Result<ParseResult, ReaderError> {
         match self.lines.next() {
             None => return Ok(ParseResult::SourceComplete),
@@ -83,51 +68,15 @@ impl Source {
                         }
                     }
 
-                    // Check for include directive
-                    /*
-                    match include(&line) {
-                        Ok((_, include)) => {
-                            if self.state != ReaderState::None {
-                                return Err(ReaderError::UnexpectedItem(
-                                    LineType::IncludeDirective,
-                                    self.line_number,
-                                ));
-                            }
-
-                            return Ok(ParseResult::IncludeDirective(include.to_owned()));
+                    if let Ok((_, include)) = include(&line) {
+                        if self.state != ReaderState::None {
+                            return Err(ReaderError::UnexpectedItem(
+                                LineType::IncludeDirective,
+                                self.line_number,
+                            ));
                         }
-                        Err(e) => {
-                            if let err = nom::Err::Error(e) {
-                                if err.input.len() != line.len() {
-                                    println!("failed to parse include");
-                                }
-                            }
-                        }
-                        Err(e) => match e {
-                            nom::Err::Error(e) => {
-                                if e.input.len() != line.len() {
-                                    println!("failed to parse include");
-                                }
-                            }
-                            _ => {}
-                        },
-                    }
-                    */
-                    match self.handle_parse(LineType::IncludeDirective, include(&line)) {
-                        Err(e) => return Err(e),
-                        Ok(include) => match include {
-                            None => {}
-                            Some(include) => {
-                                if self.state != ReaderState::None {
-                                    return Err(ReaderError::UnexpectedItem(
-                                        LineType::IncludeDirective,
-                                        self.line_number,
-                                    ));
-                                }
 
-                                return Ok(ParseResult::IncludeDirective(include.to_owned()));
-                            }
-                        },
+                        return Ok(ParseResult::IncludeDirective(include.to_owned()));
                     }
 
                     // Check for period transaction header
