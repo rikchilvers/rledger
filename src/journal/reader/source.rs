@@ -1,6 +1,6 @@
 use super::{
     comment::*, error::LineType, error::ReaderError, include::include,
-    periodic_transaction::periodic_transaction_header, posting::posting, reader::ReaderState,
+    periodic_transaction::periodic_transaction_header, posting::posting, reader_state::ReaderState,
     transaction_header::transaction_header,
 };
 use crate::journal::{

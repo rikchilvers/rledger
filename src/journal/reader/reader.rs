@@ -2,20 +2,6 @@ use super::{error::ReaderError, source::ParseResult, source::Source};
 use crate::journal::transaction::Transaction;
 use std::{cell::RefCell, collections::HashSet, path::PathBuf, rc::Rc};
 
-#[derive(Debug, PartialEq, Eq)]
-pub enum ReaderState {
-    None,
-    InTransaction,
-    InPeriodicTransaction,
-    InPosting,
-}
-
-impl Default for ReaderState {
-    fn default() -> Self {
-        Self::None
-    }
-}
-
 pub struct Reader {
     sources: Vec<Source>,
     visited_sources: HashSet<String>,
