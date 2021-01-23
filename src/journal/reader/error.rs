@@ -14,7 +14,7 @@ impl std::fmt::Display for LineType {
             LineType::Comment => write!(f, "a comment"),
             LineType::IncludeDirective => write!(f, "an include directive"),
             LineType::TransactionHeader => write!(f, "a transaction header"),
-            LineType::PeriodidTransactionHeader => write!(f, "a periodic transaction Header"),
+            LineType::PeriodidTransactionHeader => write!(f, "a periodic transaction header"),
             LineType::Posting => write!(f, "a posting"),
         }
     }
