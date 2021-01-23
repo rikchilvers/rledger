@@ -13,6 +13,10 @@
     Assets:Current
     Expenses:Life:Clothing    £50.00
 
+~ monthly from 2021 to 2022
+    Assets:Current
+    Expenses:Life:Clothing      £35
+
 ; include test.journal
 
 ;
