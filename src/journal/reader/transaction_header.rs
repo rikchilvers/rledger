@@ -1,59 +1,31 @@
 use super::{comment::comment, dates::date, payee::payee, transaction_status::transaction_status};
-use nom::combinator::opt;
-use nom::IResult;
+use nom::{
+    character::complete::{multispace0, multispace1},
+    combinator::{map, opt},
+    sequence::{preceded, tuple},
+    IResult,
+};
 
 use crate::journal::transaction_header::TransactionHeader;
 use crate::journal::transaction_status::TransactionStatus;
 
 pub fn transaction_header(i: &str) -> IResult<&str, TransactionHeader> {
-    let (i, date) = date(i)?;
-
-    let (i, maybe_comment) = opt(comment)(i)?;
-    if let Some(comment) = maybe_comment {
-        let th = TransactionHeader {
-            date: date.0,
-            status: TransactionStatus::NoStatus,
-            payee: "".to_owned(),
-            comment: Some(comment.to_owned()),
-        };
-        return Ok((i, th));
-    }
-
-    let (i, maybe_status) = transaction_status(i)?;
-    let status = maybe_status.unwrap_or(TransactionStatus::NoStatus);
-
-    let (i, maybe_comment) = opt(comment)(i)?;
-    if let Some(comment) = maybe_comment {
-        let th = TransactionHeader {
-            date: date.0,
-            status,
-            payee: "".to_owned(),
-            comment: Some(comment.to_owned()),
-        };
-        return Ok((i, th));
-    }
-
-    let (i, payee) = payee(i)?;
-    let trimmed_payee = payee.trim_end().to_owned();
-
-    let (i, maybe_comment) = opt(comment)(i)?;
-    if let Some(comment) = maybe_comment {
-        let th = TransactionHeader {
-            date: date.0,
-            status,
-            payee: trimmed_payee,
-            comment: Some(comment.to_owned()),
-        };
-        return Ok((i, th));
-    }
-
-    let th = TransactionHeader {
-        date: date.0,
-        status,
-        payee: trimmed_payee,
-        comment: None,
-    };
-    Ok(("", th))
+    map(
+        tuple((
+            date,
+            opt(preceded(multispace1, transaction_status)),
+            opt(preceded(multispace1, payee)),
+            opt(preceded(multispace0, comment)),
+        )),
+        |parsed: ((time::Date, _), Option<TransactionStatus>, Option<&str>, Option<&str>)| {
+            return TransactionHeader {
+                date: parsed.0 .0,
+                status: parsed.1.unwrap_or_default(),
+                payee: parsed.2.unwrap_or("").trim_end().to_owned(),
+                comment: parsed.3.map(|s| s.to_owned()),
+            };
+        },
+    )(i)
 }
 
 #[cfg(test)]

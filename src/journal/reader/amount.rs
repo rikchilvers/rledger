@@ -4,7 +4,7 @@ use nom::{
     branch::permutation,
     bytes::complete::{tag, take_while},
     character::complete::digit1,
-    combinator::{map_res, opt, recognize, value},
+    combinator::{map, map_res, opt, recognize, value},
     sequence::{preceded, tuple},
     IResult,
 };
@@ -26,7 +26,7 @@ impl std::fmt::Display for Amount {
 }
 
 pub fn amount_mapped(i: &str) -> IResult<&str, Amount> {
-    map_res::<_, _, _, _, nom::error::Error<&str>, _, _>(amount, |a: (f64, Option<&str>)| Ok(Amount::from(a)))(i)
+    map(amount, |a: (f64, Option<&str>)| Amount::from(a))(i)
 }
 
 pub fn amount(i: &str) -> IResult<&str, (f64, Option<&str>)> {

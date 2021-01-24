@@ -6,7 +6,7 @@ use super::{
 use crate::journal::{Amount, Posting};
 
 use nom::{
-    combinator::{map_res, opt},
+    combinator::{map, opt},
     sequence::{preceded, tuple},
     IResult,
 };
@@ -26,9 +26,9 @@ impl From<(&str, Option<Amount>)> for Posting {
 pub fn posting(i: &str) -> IResult<&str, Posting> {
     preceded(
         whitespace2,
-        map_res::<_, _, _, _, nom::error::Error<&str>, _, _>(
-            tuple((account, preceded(manyspace0, opt(amount_mapped)))),
-            |t: (&str, Option<Amount>)| Ok(Posting::from(t)),
+        map(
+            tuple((account, opt(preceded(manyspace0, amount_mapped)))),
+            |t: (&str, Option<Amount>)| Posting::from(t),
         ),
     )(i)
 }

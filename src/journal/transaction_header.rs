@@ -5,6 +5,7 @@ use super::transaction_status::TransactionStatus;
 pub struct TransactionHeader {
     pub date: time::Date,
     pub status: TransactionStatus,
+    // TODO this should be optional
     pub payee: String,
     pub comment: Option<String>,
 }

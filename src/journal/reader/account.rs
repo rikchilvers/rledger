@@ -1,6 +1,5 @@
 use nom::{branch::alt, bytes::complete::take_until, combinator::rest, IResult};
 
-// TODO: this needs to not accept comments
 pub fn account(i: &str) -> IResult<&str, &str> {
     alt((
         take_until("  "),
@@ -41,6 +40,6 @@ mod tests {
     #[test]
     fn it_matches_account_as_last_element() {
         let input = "Assets:Savings:ISA";
-        assert_eq!(account(input), Ok(("", input)));
+        assert_eq!(account(input), Ok(("", "Assets:Savings:ISA")));
     }
 }

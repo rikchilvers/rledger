@@ -1,21 +1,22 @@
 use nom::{
     branch::alt,
-    bytes::complete::{tag, take_till},
+    bytes::complete::tag,
     combinator::{opt, recognize, value},
-    sequence::preceded,
     IResult,
 };
 
-use super::payee::is_not_space;
 use crate::journal::transaction_status::TransactionStatus;
 
-pub fn transaction_status(i: &str) -> IResult<&str, Option<TransactionStatus>> {
-    preceded(
-        take_till(is_not_space),
+pub fn transaction_status(i: &str) -> IResult<&str, TransactionStatus> {
+    nom::combinator::map(
         opt(alt((
             value(TransactionStatus::Cleared, recognize(tag("*"))),
             value(TransactionStatus::Uncleared, recognize(tag("!"))),
         ))),
+        |value| match value {
+            Some(v) => return v,
+            None => return TransactionStatus::NoStatus,
+        },
     )(i)
 }
 
@@ -25,16 +26,19 @@ mod tests {
 
     #[test]
     fn it_handles_cleared() {
-        assert_eq!(transaction_status("*"), Ok(("", Some(TransactionStatus::Cleared))));
+        assert_eq!(transaction_status("*"), Ok(("", TransactionStatus::Cleared)));
     }
 
     #[test]
     fn it_handles_uncleared() {
-        assert_eq!(transaction_status("!"), Ok(("", Some(TransactionStatus::Uncleared))));
+        assert_eq!(transaction_status("!"), Ok(("", TransactionStatus::Uncleared)));
     }
 
     #[test]
     fn it_handles_none() {
-        assert_eq!(transaction_status("something else"), Ok(("something else", None)));
+        assert_eq!(
+            transaction_status("something else"),
+            Ok(("something else", TransactionStatus::NoStatus))
+        );
     }
 }
