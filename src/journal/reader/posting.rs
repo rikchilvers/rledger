@@ -22,29 +22,6 @@ impl From<(&str, Option<Amount>)> for Posting {
     }
 }
 
-impl std::fmt::Display for Posting {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut comments: Option<String> = None;
-        for comment in self.comments.iter() {
-            match comments {
-                Some(c) => comments = Some(format!("{}\n    ; {}", c, comment)),
-                None => comments = Some(format!("    ; {}", comment)),
-            }
-        }
-
-        match &self.amount {
-            Some(a) => match comments {
-                Some(c) => return write!(f, "  {}\t{}\n{}\n", self.path, a, c),
-                None => return write!(f, "  {}\t{}\n", self.path, a),
-            },
-            None => match comments {
-                Some(c) => return write!(f, "  {}\n{}\n", self.path, c),
-                None => return write!(f, "  {}\n", self.path),
-            },
-        }
-    }
-}
-
 /// Returns the indentation level and the posting
 pub fn posting(i: &str) -> IResult<&str, Posting> {
     preceded(
