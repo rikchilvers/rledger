@@ -54,7 +54,7 @@ impl std::fmt::Display for Transaction {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::journal::amount::Amount;
+    use crate::amount::Amount;
 
     #[test]
     fn it_works() {

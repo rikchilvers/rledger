@@ -1,6 +1,6 @@
 use crate::command::Command;
-use crate::journal::ReaderError;
-use crate::journal::Transaction;
+use journal::Transaction;
+use reader::ReaderError;
 use std::cell::RefCell;
 use std::rc::Rc;
 

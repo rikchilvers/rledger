@@ -1,5 +1,5 @@
 use super::{error::ReaderError, source::ParseResult, source::Source};
-use crate::journal::transaction::Transaction;
+use journal::Transaction;
 use std::{cell::RefCell, collections::HashSet, path::PathBuf, rc::Rc};
 
 pub struct Reader {

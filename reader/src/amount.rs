@@ -1,4 +1,4 @@
-use crate::journal::amount::Amount;
+use journal::Amount;
 use nom::{
     branch::alt,
     branch::permutation,
@@ -9,24 +9,15 @@ use nom::{
     IResult,
 };
 
-impl From<(f64, Option<&str>)> for Amount {
-    fn from(lexed: (f64, Option<&str>)) -> Self {
-        Amount {
-            commodity: lexed.1.unwrap_or("").to_owned(),
-            quantity: lexed.0 as i64 * 100 + (lexed.0.fract() * 100.) as i64,
-        }
-    }
-}
-
-impl std::fmt::Display for Amount {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let quantity = self.quantity as f64 / 100.;
-        write!(f, "{}{:.2}", self.commodity, quantity)
+fn amount_from_lexed(lexed: (f64, Option<&str>)) -> Amount {
+    Amount {
+        commodity: lexed.1.unwrap_or("").to_owned(),
+        quantity: lexed.0 as i64 * 100 + (lexed.0.fract() * 100.) as i64,
     }
 }
 
 pub fn amount_mapped(i: &str) -> IResult<&str, Amount> {
-    map(amount, |a: (f64, Option<&str>)| Amount::from(a))(i)
+    map(amount, |a: (f64, Option<&str>)| amount_from_lexed(a))(i)
 }
 
 pub fn amount(i: &str) -> IResult<&str, (f64, Option<&str>)> {

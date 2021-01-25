@@ -2,6 +2,7 @@ extern crate time;
 
 mod account;
 mod amount;
+mod bufreader;
 mod comment;
 mod dates;
 mod error;
@@ -12,7 +13,7 @@ mod posting;
 mod reader;
 mod reader_state;
 mod source;
-mod transaction_header;
+pub mod transaction_header;
 mod transaction_status;
 mod whitespace;
 

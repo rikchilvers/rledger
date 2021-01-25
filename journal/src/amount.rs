@@ -12,3 +12,10 @@ impl Amount {
         }
     }
 }
+
+impl std::fmt::Display for Amount {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let quantity = self.quantity as f64 / 100.;
+        write!(f, "{}{:.2}", self.commodity, quantity)
+    }
+}

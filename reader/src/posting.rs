@@ -3,7 +3,7 @@ use super::{
     amount::amount_mapped,
     whitespace::{manyspace0, whitespace2},
 };
-use crate::journal::{Amount, Posting};
+use journal::{Amount, Posting};
 
 use nom::{
     combinator::{map, opt},
@@ -11,14 +11,12 @@ use nom::{
     IResult,
 };
 
-impl From<(&str, Option<Amount>)> for Posting {
-    fn from(lexed: (&str, Option<Amount>)) -> Self {
-        Posting {
-            path: lexed.0.to_owned(),
-            amount: lexed.1,
-            comments: vec![],
-            transaction: None,
-        }
+fn posting_from_lexed(lexed: (&str, Option<Amount>)) -> Posting {
+    Posting {
+        path: lexed.0.to_owned(),
+        amount: lexed.1,
+        comments: vec![],
+        transaction: None,
     }
 }
 
@@ -28,7 +26,7 @@ pub fn posting(i: &str) -> IResult<&str, Posting> {
         whitespace2,
         map(
             tuple((account, opt(preceded(manyspace0, amount_mapped)))),
-            |t: (&str, Option<Amount>)| Posting::from(t),
+            |t: (&str, Option<Amount>)| posting_from_lexed(t),
         ),
     )(i)
 }

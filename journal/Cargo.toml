@@ -1,13 +1,8 @@
 [package]
-name = "rledger"
+name = "journal"
 version = "0.1.0"
 authors = ["Rik Chilvers <rikchilvers@fastmail.com>"]
 edition = "2018"
 
-[workspace]
-
 [dependencies]
-journal = { path = "journal" }
-reader = { path = "reader" }
-clap = "2"
-
+time = "0.2"

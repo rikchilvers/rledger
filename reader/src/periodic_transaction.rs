@@ -1,7 +1,6 @@
 use super::dates::{date, DateSource};
-use super::ReaderError;
-use crate::journal::periodic_transaction::Period;
-use crate::journal::periodic_transaction::PeriodInterval;
+use journal::Period;
+use journal::PeriodInterval;
 use nom::branch::alt;
 use nom::bytes::complete::tag;
 use nom::character::complete::{multispace0, multispace1};
@@ -22,7 +21,7 @@ enum Direction {
     In,
 }
 
-type PHeader = (
+type PeriodicTransactionHeader = (
     Option<PeriodInterval>,
     Option<Direction>,
     Option<(time::Date, DateSource)>,
@@ -30,57 +29,53 @@ type PHeader = (
     Option<(time::Date, DateSource)>,
 );
 
-impl TryFrom<PHeader> for Period {
-    type Error = nom::error::Error<()>;
+fn period_from_header(header: PeriodicTransactionHeader) -> Result<Period, nom::error::Error<()>> {
+    let mut period = Period::default();
+    period.interval = header.0;
 
-    fn try_from(header: PHeader) -> Result<Self, nom::error::Error<()>> {
-        let mut period = Period::default();
-        period.interval = header.0;
+    match (header.2, header.4) {
+        // No dates
+        (None, None) => {}
 
-        match (header.2, header.4) {
-            // No dates
-            (None, None) => {}
-
-            // Two dates
-            (Some((start_date, _)), Some((end_date, _))) => {
-                period.start_date = Some(start_date);
-                period.end_date = Some(end_date);
-            }
-
-            // One date
-            (Some((date, source)), None) | (None, Some((date, source))) => match (header.1, header.3) {
-                // No directions
-                (None, None) => {
-                    period.start_date = Some(date);
-                    period.end_date = Some(final_date(date, source));
-                }
-
-                (None, Some(_)) => return Err(nom::error::Error::new((), nom::error::ErrorKind::ParseTo)),
-
-                // Two directions
-                (Some(_), Some(_)) => return Err(nom::error::Error::new((), nom::error::ErrorKind::ParseTo)),
-
-                // Only in
-                (Some(Direction::In), None) => {
-                    period.start_date = Some(date);
-                    period.end_date = Some(final_date(date, source));
-                }
-
-                // Only from
-                (Some(Direction::From), None) => {
-                    period.start_date = Some(date);
-                }
-
-                // Only to
-                // TODO: should this be inclusive or exclusive?
-                (Some(Direction::To), None) => {
-                    period.end_date = Some(date);
-                }
-            },
+        // Two dates
+        (Some((start_date, _)), Some((end_date, _))) => {
+            period.start_date = Some(start_date);
+            period.end_date = Some(end_date);
         }
 
-        return Ok(period);
+        // One date
+        (Some((date, source)), None) | (None, Some((date, source))) => match (header.1, header.3) {
+            // No directions
+            (None, None) => {
+                period.start_date = Some(date);
+                period.end_date = Some(final_date(date, source));
+            }
+
+            (None, Some(_)) => return Err(nom::error::Error::new((), nom::error::ErrorKind::ParseTo)),
+
+            // Two directions
+            (Some(_), Some(_)) => return Err(nom::error::Error::new((), nom::error::ErrorKind::ParseTo)),
+
+            // Only in
+            (Some(Direction::In), None) => {
+                period.start_date = Some(date);
+                period.end_date = Some(final_date(date, source));
+            }
+
+            // Only from
+            (Some(Direction::From), None) => {
+                period.start_date = Some(date);
+            }
+
+            // Only to
+            // TODO: should this be inclusive or exclusive?
+            (Some(Direction::To), None) => {
+                period.end_date = Some(date);
+            }
+        },
     }
+
+    return Ok(period);
 }
 
 fn final_date(date: time::Date, source: DateSource) -> time::Date {
@@ -108,7 +103,7 @@ fn period_expression(i: &str) -> IResult<&str, Period> {
             opt(direction),
             opt(ws(date)),
         )),
-        |header| Period::try_from(header),
+        |header| period_from_header(header),
     )(i)
 }
 

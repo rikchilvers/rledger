@@ -5,7 +5,7 @@ use nom::{
     IResult,
 };
 
-use crate::journal::transaction_status::TransactionStatus;
+use journal::TransactionStatus;
 
 pub fn transaction_status(i: &str) -> IResult<&str, TransactionStatus> {
     nom::combinator::map(

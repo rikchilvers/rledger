@@ -1,5 +1,5 @@
-use crate::journal::ReaderError;
 use crate::journal::Transaction;
+use crate::reader::ReaderError;
 use std::cell::RefCell;
 use std::rc::Rc;
 

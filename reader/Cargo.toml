@@ -1,0 +1,17 @@
+[package]
+name = "reader"
+version = "0.1.0"
+authors = ["Rik Chilvers <rikchilvers@fastmail.com>"]
+edition = "2018"
+
+[dependencies]
+journal = { path = "../journal" }
+nom = "6.0"
+time = "0.2"
+
+[dev-dependencies]
+criterion = "0.3"
+
+[[bench]]
+name = "parser_verification"
+harness = false
