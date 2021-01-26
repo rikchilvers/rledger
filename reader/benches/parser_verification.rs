@@ -1,7 +1,33 @@
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use reader::verify::{error_transformer, verify_fn, VerificationResult};
+use criterion::{criterion_group, criterion_main, Criterion};
+use reader::peek_and_parse::peek_and_parse;
 
 use nom::{bytes::complete::tag, sequence::preceded, IResult};
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum VerificationResult<I, O> {
+    Ok((I, O)), // the parser worked
+    Error,      // the parser failed
+    NoMatch,    // the parser did not match the input
+}
+
+/// Attemps the `parser` and checks its length against the input's length to see if it hard failed
+pub fn verify_fn<'a, O>(
+    input: &'a str,
+    mut parser: impl FnMut(&'a str) -> IResult<&'a str, O>,
+) -> VerificationResult<&'a str, O> {
+    match parser(input) {
+        Ok((remaining, output)) => return VerificationResult::Ok((remaining, output)),
+        Err(e) => match e {
+            nom::Err::Error(e) => {
+                if e.input.len() != input.len() {
+                    return VerificationResult::Error;
+                }
+                return VerificationResult::NoMatch;
+            }
+            _ => unimplemented!(),
+        },
+    }
+}
 
 pub fn verification_benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("verification");
@@ -22,7 +48,7 @@ pub fn verification_benchmark(c: &mut Criterion) {
     }
 
     assert_eq!(
-        error_transformer(abc_parser, xyz_parser)(input),
+        peek_and_parse(abc_parser, xyz_parser)(input),
         Err(nom::Err::Failure(nom::error::Error::new(
             input,
             nom::error::ErrorKind::Tag
@@ -30,11 +56,10 @@ pub fn verification_benchmark(c: &mut Criterion) {
     );
 
     group.bench_function("error transformer", |b| {
-        b.iter(|| error_transformer(abc_parser, xyz_parser)(input))
+        b.iter(|| peek_and_parse(abc_parser, xyz_parser)(input))
     });
 
     assert_eq!(verify_fn(input, both), VerificationResult::Error);
-    println!("hello");
 
     group.bench_function("verify", |b| b.iter(|| verify_fn(input, both)));
 }
