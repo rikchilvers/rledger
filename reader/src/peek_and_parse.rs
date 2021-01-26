@@ -4,6 +4,9 @@ use nom::{
     IResult,
 };
 
+use super::error::LineType;
+use super::ReaderError;
+
 /// Peeks at the `marker` and if it succeeds, tries the `parser` (which it will hard fail if
 /// unsuccessful)
 pub fn peek_and_parse<I: Clone, O1, O2, E: nom::error::ParseError<I>, F, G>(
@@ -15,6 +18,23 @@ where
     G: nom::Parser<I, O2, E>,
 {
     preceded(peek(marker), cut(parser))
+}
+
+fn parse_line<I: Clone, O, E: nom::error::ParseError<I>>(
+    input: I,
+    line_type: LineType,
+    line_number: u64,
+    // mut parser: impl FnMut(I) -> IResult<I, O, E>,
+    mut parser: impl FnMut(I) -> IResult<I, O, E>,
+) -> Result<Option<O>, ReaderError> {
+    match parser(input) {
+        Ok((_, output)) => return Ok(Some(output)),
+        Err(e) => match e {
+            nom::Err::Error(_) => Ok(None),
+            nom::Err::Failure(_) => Err(ReaderError::Parse(line_type, line_number)),
+            nom::Err::Incomplete(_) => unimplemented!(),
+        },
+    }
 }
 
 #[cfg(test)]
