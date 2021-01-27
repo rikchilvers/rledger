@@ -12,7 +12,6 @@ pub mod peek_and_parse;
 mod periodic_transaction;
 mod posting;
 mod reader;
-mod reader_state;
 mod source;
 pub mod transaction_header;
 mod transaction_status;
