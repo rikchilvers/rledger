@@ -1,7 +1,7 @@
 use super::{
-    bufreader::BufReader, comment::*, error::LineType, error::ReaderError, include::include,
-    periodic_transaction::periodic_transaction_header, posting::posting, reader_state::ReaderState,
-    transaction_header::transaction_from_header, transaction_header::transaction_header,
+    bufreader::BufReader, comment::*, error::LineType, error::ReaderError, include::parse_include,
+    periodic_transaction::parse_periodic_transaction_header, posting::parse_posting,
+    transaction_header::parse_transaction_header, transaction_header::transaction_from_header,
 };
 use journal::{Amount, PeriodicTransaction, Posting, Transaction};
 use std::cell::RefCell;
@@ -60,34 +60,46 @@ impl Source {
                     // TODO: move this to contents
                     self.line_number += 1;
 
+                    // println!("{}", line);
+
+                    /*
                     if line.len() == 0 {
+                        println!("empty");
                         self.state = ReaderState::None;
 
                         match self.transaction.take() {
                             None => return self.parse_line(),
                             Some(ref transaction) => {
                                 if let Some(posting) = self.posting.take() {
-                                    close_transaction(&mut transaction.borrow_mut(), self.line_number - 1)?;
+                                    add_posting_to_transaction(
+                                        &mut transaction.borrow_mut(),
+                                        posting,
+                                        self.line_number - 1,
+                                    )?;
                                 }
                                 close_transaction(&mut transaction.borrow_mut(), self.line_number - 1)?;
                                 return Ok(ParseResult::Transaction(Rc::clone(transaction)));
                             }
                         }
                     }
+                    */
 
-                    if let Ok((_, include)) = include(&line) {
-                        if self.state != ReaderState::None {
-                            return Err(ReaderError::UnexpectedItem(
-                                LineType::IncludeDirective,
-                                self.line_number,
-                            ));
-                        }
+                    // Check for an include directive
+                    if let Some(include) = parse_include(&line, self.line_number)? {
+                        println!("!! include: {}", include);
+                        // if self.state != ReaderState::None {
+                        //     return Err(ReaderError::UnexpectedItem(
+                        //         LineType::IncludeDirective,
+                        //         self.line_number,
+                        //     ));
+                        // }
 
-                        return Ok(ParseResult::IncludeDirective(include.to_owned()));
+                        // return Ok(ParseResult::IncludeDirective(include.to_owned()));
                     }
 
-                    // Check for period transaction header
-                    if let Ok((_, period)) = periodic_transaction_header(&line) {
+                    // Check for a period transaction header
+                    if let Some(period) = parse_periodic_transaction_header(&line, self.line_number)? {
+                        println!("!! pth");
                         if self.state != ReaderState::None {
                             return Err(ReaderError::UnexpectedItem(
                                 LineType::PeriodidTransactionHeader,
@@ -116,9 +128,10 @@ impl Source {
                         }
                     }
 
-                    // Check for transaction header
-                    if let Ok((_, transaction_header)) = transaction_header(&line) {
-                        if self.state != ReaderState::None {
+                    // Check for a transaction header
+                    if let Some(transaction_header) = parse_transaction_header(&line, self.line_number)? {
+                        println!("!! th");
+                        if self.state != ReaderState::None && self.state != ReaderState::InPosting {
                             return Err(ReaderError::UnexpectedItem(
                                 LineType::TransactionHeader,
                                 self.line_number,
@@ -146,9 +159,11 @@ impl Source {
                         }
                     }
 
-                    // Check for comments
+                    // Check for a comment
                     // This must come before postings because that lexer will match comments greedily
+                    // TODO check the above is still true
                     if let Ok((_, comment)) = comment_min(2, &line) {
+                        println!("!! comment");
                         match self.state {
                             ReaderState::InPosting => match &mut self.posting {
                                 None => return Err(ReaderError::MissingPosting(self.line_number)),
@@ -158,14 +173,16 @@ impl Source {
                                 None => return Err(ReaderError::MissingTransaction(self.line_number)),
                                 Some(transaction) => transaction.borrow_mut().comments.push(comment.to_owned()),
                             },
+                            // TODO handle comments in periodic transactions
                             _ => return Err(ReaderError::UnexpectedItem(LineType::Comment, self.line_number)),
                         }
 
                         return self.parse_line();
                     }
 
-                    // Check for postings
-                    if let Ok((_, mut posting)) = posting(&line) {
+                    // Check for a posting
+                    if let Some(mut posting) = parse_posting(&line, self.line_number)? {
+                        println!("!! posting");
                         if self.state == ReaderState::None {
                             return Err(ReaderError::UnexpectedItem(LineType::Posting, self.line_number));
                         }
@@ -183,6 +200,7 @@ impl Source {
                         return self.parse_line();
                     }
 
+                    // We didn't match anything so move on
                     return self.parse_line();
                 }
             },

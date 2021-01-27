@@ -1,4 +1,7 @@
 use super::dates::{date, DateSource};
+use super::error::LineType;
+use super::error::ReaderError;
+use super::peek_and_parse::*;
 use journal::Period;
 use journal::PeriodInterval;
 use nom::branch::alt;
@@ -88,7 +91,16 @@ fn final_date(date: time::Date, source: DateSource) -> time::Date {
     }
 }
 
-pub fn periodic_transaction_header(i: &str) -> IResult<&str, Period> {
+pub fn parse_periodic_transaction_header(i: &str, line_number: u64) -> Result<Option<Period>, ReaderError> {
+    parse_line(
+        i,
+        LineType::PeriodidTransactionHeader,
+        line_number,
+        peek_and_parse(tag("~"), periodic_transaction_header),
+    )
+}
+
+fn periodic_transaction_header(i: &str) -> IResult<&str, Period> {
     preceded(preceded(tag("~"), multispace1), period_expression)(i)
 }
 

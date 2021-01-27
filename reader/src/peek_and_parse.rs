@@ -20,7 +20,7 @@ where
     preceded(peek(marker), cut(parser))
 }
 
-fn parse_line<I: Clone, O, E: nom::error::ParseError<I>>(
+pub fn parse_line<I: Clone, O, E: nom::error::ParseError<I>>(
     input: I,
     line_type: LineType,
     line_number: u64,

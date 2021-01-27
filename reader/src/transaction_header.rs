@@ -1,3 +1,6 @@
+use super::error::LineType;
+use super::error::ReaderError;
+use super::peek_and_parse::*;
 use super::{comment::comment, dates::date, payee::payee, transaction_status::transaction_status};
 
 use journal::Transaction;
@@ -28,6 +31,15 @@ pub fn transaction_from_header(header: TransactionHeader) -> Transaction {
         comments: vec![],
         elided_amount_posting_index: None,
     }
+}
+
+pub fn parse_transaction_header(i: &str, line_number: u64) -> Result<Option<TransactionHeader>, ReaderError> {
+    parse_line(
+        i,
+        LineType::TransactionHeader,
+        line_number,
+        peek_and_parse(one_of("0123456789"), transaction_header),
+    )
 }
 
 pub fn transaction_header(i: &str) -> IResult<&str, TransactionHeader> {
