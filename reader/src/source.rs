@@ -8,6 +8,20 @@ use std::cell::RefCell;
 use std::path::PathBuf;
 use std::rc::Rc;
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum ReaderState {
+    None, // once we have started parsing, we'll never re-enter this state
+    InTransaction,
+    InPeriodicTransaction,
+    InPosting,
+}
+
+impl Default for ReaderState {
+    fn default() -> Self {
+        Self::None
+    }
+}
+
 pub enum ParseResult {
     SourceComplete,
     Transaction(Rc<RefCell<Transaction>>),

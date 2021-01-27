@@ -4,9 +4,8 @@ use journal::Transaction;
 use journal::TransactionStatus;
 
 use nom::{
-    bytes::complete::tag,
     character::complete::{multispace0, multispace1, one_of},
-    combinator::{cut, map, opt, peek},
+    combinator::{map, opt},
     sequence::{preceded, tuple},
     IResult,
 };

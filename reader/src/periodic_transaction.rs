@@ -12,8 +12,6 @@ use nom::sequence::preceded;
 use nom::sequence::tuple;
 use nom::IResult;
 
-use std::convert::TryFrom;
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum Direction {
     From,

@@ -11,11 +11,11 @@ impl std::fmt::Display for LineType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             LineType::Unknown => write!(f, "an unknown line type"),
-            LineType::Comment => write!(f, "a comment"),
-            LineType::IncludeDirective => write!(f, "an include directive"),
-            LineType::TransactionHeader => write!(f, "a transaction header"),
-            LineType::PeriodidTransactionHeader => write!(f, "a periodic transaction header"),
-            LineType::Posting => write!(f, "a posting"),
+            LineType::Comment => write!(f, "comment"),
+            LineType::IncludeDirective => write!(f, "include directive"),
+            LineType::TransactionHeader => write!(f, "transaction header"),
+            LineType::PeriodidTransactionHeader => write!(f, "periodic transaction header"),
+            LineType::Posting => write!(f, "posting"),
         }
     }
 }
