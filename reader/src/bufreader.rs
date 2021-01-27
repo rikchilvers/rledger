@@ -42,7 +42,22 @@ impl Iterator for BufReader {
 
         self.reader
             .read_line(buffer)
-            .map(|u| if u == 0 { None } else { Some(Rc::clone(&self.buffer)) })
+            .map(|u| {
+                if u == 0 {
+                    return None;
+                }
+
+                if let Some(r) = Rc::get_mut(&mut self.buffer) {
+                    // drop the newline
+                    if r.as_bytes().last() == Some(&10) {
+                        r.pop();
+                    }
+                } else {
+                    panic!("couldn't take reader buffer as mutable");
+                }
+
+                return Some(Rc::clone(&self.buffer));
+            })
             .transpose()
     }
 }
