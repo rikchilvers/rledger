@@ -1,7 +1,13 @@
 use super::{
-    bufreader::BufReader, comment::*, error::LineType, error::ReaderError, include::parse_include,
-    periodic_transaction::parse_periodic_transaction_header, posting::parse_posting,
-    transaction_header::parse_transaction_header, transaction_header::transaction_from_header,
+    bufreader::BufReader,
+    comment::*,
+    error::LineType,
+    error::ReaderError,
+    include::parse_include,
+    periodic_transaction::parse_periodic_transaction_header,
+    posting::parse_posting,
+    transaction_header::transaction_from_header,
+    transaction_header::{parse_transaction_header, TransactionHeader},
 };
 use journal::{Amount, PeriodicTransaction, Posting, Transaction};
 use std::cell::RefCell;
@@ -53,88 +59,32 @@ impl Source {
 
     pub fn parse_line(&mut self) -> Result<ParseResult, ReaderError> {
         match self.contents.next() {
-            None => return Ok(ParseResult::SourceComplete),
+            None => {
+                // If the source is complete, we need to finish the last transactions
+                if let Some(transaction) = &self.transaction.take() {
+                    // We might have just read a posting, so add that to the previous transaction
+                    if let Some(posting) = self.posting.take() {
+                        add_posting_to_transaction(&mut transaction.borrow_mut(), posting, self.line_number - 1)?;
+                    }
+
+                    close_transaction(&mut transaction.borrow_mut(), self.line_number - 1)?;
+
+                    return Ok(ParseResult::Transaction(Rc::clone(transaction)));
+                }
+
+                return Ok(ParseResult::SourceComplete);
+            }
             Some(line) => match line {
+                // TODO: handle this error
                 Err(e) => panic!("{}", e),
                 Ok(line) => {
                     // TODO: move this to contents
                     self.line_number += 1;
 
-                    // println!("line: '{}'", line);
-
-                    // Check for an include directive
-                    if let Some(include) = parse_include(&line, self.line_number)? {
-                        // if self.state != ReaderState::None {
-                        //     return Err(ReaderError::UnexpectedItem(
-                        //         LineType::IncludeDirective,
-                        //         self.line_number,
-                        //     ));
-                        // }
-
-                        return Ok(ParseResult::IncludeDirective(include.to_owned()));
-                    }
-
-                    // Check for a period transaction header
-                    if let Some(period) = parse_periodic_transaction_header(&line, self.line_number)? {
-                        if self.state != ReaderState::None {
-                            return Err(ReaderError::UnexpectedItem(
-                                LineType::PeriodidTransactionHeader,
-                                self.line_number,
-                            ));
-                        }
-                        self.state = ReaderState::InPeriodicTransaction;
-
-                        println!("{:?}", period);
-
-                        // We might have just read a posting, so add that to the previous transaction
-                        // TODO this could be merged with the if let below
-                        if let Some((transaction, posting)) = self.transaction.as_ref().zip(self.posting.take()) {
-                            add_posting_to_transaction(&mut transaction.borrow_mut(), posting, self.line_number - 1)?;
-                        }
-
-                        // If we had a previous transaction, we need to close it now we're starting a new one
-                        if let Some(transaction) = &self.transaction.take() {
-                            close_transaction(&mut transaction.borrow_mut(), self.line_number - 1)?;
-                            let completed_transaction = Rc::clone(transaction);
-                            self.transaction = Some(Rc::new(RefCell::new(Transaction::new())));
-                            return Ok(ParseResult::Transaction(completed_transaction));
-                        } else {
-                            self.transaction = Some(Rc::new(RefCell::new(Transaction::new())));
-                            return self.parse_line();
-                        }
-                    }
-
-                    // Check for a transaction header
-                    if let Some(transaction_header) = parse_transaction_header(&line, self.line_number)? {
-                        if self.state != ReaderState::None && self.state != ReaderState::InPosting {
-                            return Err(ReaderError::UnexpectedItem(
-                                LineType::TransactionHeader,
-                                self.line_number,
-                            ));
-                        }
-                        self.state = ReaderState::InTransaction;
-
-                        // We might have just read a posting, so add that to the previous transaction
-                        if let Some((transaction, posting)) = self.transaction.as_ref().zip(self.posting.take()) {
-                            add_posting_to_transaction(&mut transaction.borrow_mut(), posting, self.line_number - 1)?;
-                        }
-
-                        // If we had a previous transaction, we need to close it now we're starting a new one
-                        if let Some(transaction) = &self.transaction {
-                            close_transaction(&mut transaction.borrow_mut(), self.line_number - 1)?;
-                            let completed_transaction = Rc::clone(transaction);
-
-                            self.transaction = Some(Rc::new(RefCell::new(transaction_from_header(transaction_header))));
-
-                            return Ok(ParseResult::Transaction(completed_transaction));
-                        } else {
-                            self.transaction = Some(Rc::new(RefCell::new(transaction_from_header(transaction_header))));
-
-                            return self.parse_line();
-                        }
-                    }
-
                     // Check for a comment
+                    // FIXME: this must come before postings because it is more discerning than the
+                    // account parser (which takes everything up to markers)
+                    // Ideally, we want the parsers to run most to least prevalent
                     if let Some(comment) = parse_comment(&line, self.line_number)? {
                         match self.state {
                             ReaderState::InPosting => match &mut self.posting {
@@ -171,10 +121,76 @@ impl Source {
                         return self.parse_line();
                     }
 
+                    // Check for a transaction header
+                    if let Some(transaction_header) = parse_transaction_header(&line, self.line_number)? {
+                        if self.state != ReaderState::None && self.state != ReaderState::InPosting {
+                            return Err(ReaderError::UnexpectedItem(
+                                LineType::TransactionHeader,
+                                self.line_number,
+                            ));
+                        }
+                        self.state = ReaderState::InTransaction;
+
+                        return self.finish_transaction(Some(transaction_header));
+                    }
+
+                    // Check for an include directive
+                    if let Some(include) = parse_include(&line, self.line_number)? {
+                        return Ok(ParseResult::IncludeDirective(include.to_owned()));
+                    }
+
+                    // Check for a period transaction header
+                    if let Some(period) = parse_periodic_transaction_header(&line, self.line_number)? {
+                        if self.state != ReaderState::None {
+                            return Err(ReaderError::UnexpectedItem(
+                                LineType::PeriodidTransactionHeader,
+                                self.line_number,
+                            ));
+                        }
+                        self.state = ReaderState::InPeriodicTransaction;
+
+                        return self.finish_transaction(None);
+                    }
+
                     // We didn't match anything so move on
                     return self.parse_line();
                 }
             },
+        }
+    }
+
+    fn finish_transaction(
+        &mut self,
+        transaction_header: Option<TransactionHeader>,
+    ) -> Result<ParseResult, ReaderError> {
+        // If we had a previous transaction, we need to close it now we're starting a new one
+        if let Some(transaction) = &self.transaction {
+            // We might have just read a posting, so add that to the previous transaction
+            if let Some(posting) = self.posting.take() {
+                add_posting_to_transaction(&mut transaction.borrow_mut(), posting, self.line_number - 1)?;
+            }
+
+            close_transaction(&mut transaction.borrow_mut(), self.line_number - 1)?;
+
+            let completed_transaction = Rc::clone(transaction);
+
+            match transaction_header {
+                Some(transaction_header) => {
+                    self.transaction = Some(Rc::new(RefCell::new(transaction_from_header(transaction_header))))
+                }
+                None => self.transaction = Some(Rc::new(RefCell::new(Transaction::new()))),
+            }
+
+            return Ok(ParseResult::Transaction(completed_transaction));
+        } else {
+            match transaction_header {
+                Some(transaction_header) => {
+                    self.transaction = Some(Rc::new(RefCell::new(transaction_from_header(transaction_header))))
+                }
+                None => self.transaction = Some(Rc::new(RefCell::new(Transaction::new()))),
+            }
+
+            return self.parse_line();
         }
     }
 }
