@@ -1,4 +1,3 @@
-use std::cell::RefCell;
 use std::rc::Weak;
 
 use super::amount::Amount;
@@ -9,7 +8,7 @@ pub struct Posting {
     pub path: String,
     pub amount: Option<Amount>,
     pub comments: Vec<String>,
-    pub transaction: Option<Weak<RefCell<Transaction>>>,
+    pub transaction: Option<Weak<Transaction>>,
 }
 
 impl Posting {

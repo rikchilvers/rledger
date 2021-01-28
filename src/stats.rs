@@ -3,7 +3,6 @@ use crate::command::Command;
 use journal::Transaction;
 use reader::Error;
 
-use std::cell::RefCell;
 use std::rc::Rc;
 
 pub struct Statistics {
@@ -19,7 +18,7 @@ impl Statistics {
 impl Command for Statistics {
     fn read_transactions<I>(&mut self, reader: I) -> Result<(), Error>
     where
-        I: IntoIterator<Item = Result<Rc<RefCell<Transaction>>, Error>>,
+        I: IntoIterator<Item = Result<Rc<Transaction>, Error>>,
     {
         for item in reader {
             match item {
