@@ -47,7 +47,7 @@ pub fn transaction_header(i: &str) -> IResult<&str, TransactionHeader> {
         tuple((
             date,
             opt(preceded(multispace1, transaction_status)),
-            opt(preceded(multispace1, payee)),
+            opt(preceded(multispace0, payee)),
             opt(preceded(multispace0, comment)),
         )),
         |parsed: ((time::Date, _), Option<Status>, Option<&str>, Option<&str>)| {
