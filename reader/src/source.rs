@@ -154,7 +154,7 @@ impl Source {
         }
     }
 
-    fn finish_transaction(&mut self, transaction_header: Option<TransactionHeader>) -> Result<ParseResult, Error> {
+    fn finish_transaction(&mut self, header: Option<TransactionHeader>) -> Result<ParseResult, Error> {
         // If we had a previous transaction, we need to close it now we're starting a new one
         if let Some(transaction) = &mut self.transaction {
             // We might have just read a posting, so add that to the previous transaction
@@ -166,19 +166,15 @@ impl Source {
 
             let completed_transaction = Rc::clone(transaction);
 
-            match transaction_header {
-                Some(transaction_header) => {
-                    self.transaction = Some(Rc::new(transaction_from_header(transaction_header)))
-                }
+            match header {
+                Some(header) => self.transaction = Some(Rc::new(transaction_from_header(header))),
                 None => self.transaction = Some(Rc::new(Transaction::new())),
             }
 
             return Ok(ParseResult::Transaction(completed_transaction));
         } else {
-            match transaction_header {
-                Some(transaction_header) => {
-                    self.transaction = Some(Rc::new(transaction_from_header(transaction_header)))
-                }
+            match header {
+                Some(header) => self.transaction = Some(Rc::new(transaction_from_header(header))),
                 None => self.transaction = Some(Rc::new(Transaction::new())),
             }
 
@@ -189,6 +185,7 @@ impl Source {
 
 fn add_posting_to_transaction(transaction: &mut Rc<Transaction>, posting: Posting, line: u64) -> Result<(), Error> {
     match Rc::get_mut(transaction) {
+        None => unimplemented!(),
         Some(transaction) => {
             if posting.amount.is_none() {
                 if transaction.elided_amount_posting_index.is_some() {
@@ -202,7 +199,6 @@ fn add_posting_to_transaction(transaction: &mut Rc<Transaction>, posting: Postin
 
             return Ok(());
         }
-        None => unimplemented!(),
     }
 }
 
