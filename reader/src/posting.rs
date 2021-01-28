@@ -1,20 +1,21 @@
-use super::error::LineType;
-use super::error::ReaderError;
-use super::peek_and_parse::*;
-use super::{
-    account::account,
-    amount::amount_mapped,
-    whitespace::{manyspace0, whitespace2},
-};
-use journal::{Amount, Posting};
-
 use nom::{
     combinator::{map, opt},
     sequence::{preceded, tuple},
     IResult,
 };
 
-pub fn parse_posting(i: &str, line_number: u64) -> Result<Option<Posting>, ReaderError> {
+use super::{
+    account::account,
+    amount::amount_mapped,
+    error::Error,
+    error::LineType,
+    peek_and_parse::{parse_line, peek_and_parse},
+    whitespace::{manyspace0, whitespace2},
+};
+
+use journal::{Amount, Posting};
+
+pub fn parse_posting(i: &str, line_number: u64) -> Result<Option<Posting>, Error> {
     parse_line(i, LineType::Posting, line_number, peek_and_parse(whitespace2, posting))
 }
 

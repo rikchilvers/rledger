@@ -1,15 +1,16 @@
 use super::{
     bufreader::BufReader,
-    comment::*,
+    comment::parse_comment,
+    error::Error,
     error::LineType,
-    error::ReaderError,
     include::parse_include,
     periodic_transaction::parse_periodic_transaction_header,
     posting::parse_posting,
-    transaction_header::transaction_from_header,
-    transaction_header::{parse_transaction_header, TransactionHeader},
+    transaction_header::{parse_transaction_header, transaction_from_header, TransactionHeader},
 };
+
 use journal::{Amount, PeriodicTransaction, Posting, Transaction};
+
 use std::cell::RefCell;
 use std::path::PathBuf;
 use std::rc::Rc;
@@ -20,12 +21,6 @@ pub enum ReaderState {
     InTransaction,
     InPeriodicTransaction,
     InPosting,
-}
-
-impl Default for ReaderState {
-    fn default() -> Self {
-        Self::None
-    }
 }
 
 pub enum ParseResult {
@@ -57,7 +52,7 @@ impl Source {
         }
     }
 
-    pub fn parse_line(&mut self) -> Result<ParseResult, ReaderError> {
+    pub fn parse_line(&mut self) -> Result<ParseResult, Error> {
         match self.contents.next() {
             None => {
                 // If the source is complete, we need to finish the last transactions
@@ -88,15 +83,15 @@ impl Source {
                     if let Some(comment) = parse_comment(&line, self.line_number)? {
                         match self.state {
                             ReaderState::InPosting => match &mut self.posting {
-                                None => return Err(ReaderError::MissingPosting(self.line_number)),
+                                None => return Err(Error::MissingPosting(self.line_number)),
                                 Some(posting) => posting.add_comment(comment.to_owned()),
                             },
                             ReaderState::InTransaction => match &self.transaction {
-                                None => return Err(ReaderError::MissingTransaction(self.line_number)),
+                                None => return Err(Error::MissingTransaction(self.line_number)),
                                 Some(transaction) => transaction.borrow_mut().comments.push(comment.to_owned()),
                             },
                             // TODO handle comments in periodic transactions
-                            _ => return Err(ReaderError::UnexpectedItem(LineType::Comment, self.line_number)),
+                            _ => return Err(Error::UnexpectedItem(LineType::Comment, self.line_number)),
                         }
 
                         return self.parse_line();
@@ -105,7 +100,7 @@ impl Source {
                     // Check for a posting
                     if let Some(mut posting) = parse_posting(&line, self.line_number)? {
                         if self.state == ReaderState::None {
-                            return Err(ReaderError::UnexpectedItem(LineType::Posting, self.line_number));
+                            return Err(Error::UnexpectedItem(LineType::Posting, self.line_number));
                         }
                         self.state = ReaderState::InPosting;
 
@@ -124,10 +119,7 @@ impl Source {
                     // Check for a transaction header
                     if let Some(transaction_header) = parse_transaction_header(&line, self.line_number)? {
                         if self.state != ReaderState::None && self.state != ReaderState::InPosting {
-                            return Err(ReaderError::UnexpectedItem(
-                                LineType::TransactionHeader,
-                                self.line_number,
-                            ));
+                            return Err(Error::UnexpectedItem(LineType::TransactionHeader, self.line_number));
                         }
                         self.state = ReaderState::InTransaction;
 
@@ -142,7 +134,7 @@ impl Source {
                     // Check for a period transaction header
                     if let Some(period) = parse_periodic_transaction_header(&line, self.line_number)? {
                         if self.state != ReaderState::None {
-                            return Err(ReaderError::UnexpectedItem(
+                            return Err(Error::UnexpectedItem(
                                 LineType::PeriodidTransactionHeader,
                                 self.line_number,
                             ));
@@ -159,10 +151,7 @@ impl Source {
         }
     }
 
-    fn finish_transaction(
-        &mut self,
-        transaction_header: Option<TransactionHeader>,
-    ) -> Result<ParseResult, ReaderError> {
+    fn finish_transaction(&mut self, transaction_header: Option<TransactionHeader>) -> Result<ParseResult, Error> {
         // If we had a previous transaction, we need to close it now we're starting a new one
         if let Some(transaction) = &self.transaction {
             // We might have just read a posting, so add that to the previous transaction
@@ -195,10 +184,10 @@ impl Source {
     }
 }
 
-fn add_posting_to_transaction(transaction: &mut Transaction, posting: Posting, line: u64) -> Result<(), ReaderError> {
+fn add_posting_to_transaction(transaction: &mut Transaction, posting: Posting, line: u64) -> Result<(), Error> {
     if posting.amount.is_none() {
         if transaction.elided_amount_posting_index.is_some() {
-            return Err(ReaderError::TwoPostingsWithElidedAmounts(line));
+            return Err(Error::TwoPostingsWithElidedAmounts(line));
         }
         let index = transaction.postings.len();
         transaction.elided_amount_posting_index = Some(index);
@@ -210,7 +199,7 @@ fn add_posting_to_transaction(transaction: &mut Transaction, posting: Posting, l
 }
 
 /// Returns true if the transaction was closed
-fn close_transaction(transaction: &mut Transaction, line: u64) -> Result<(), ReaderError> {
+fn close_transaction(transaction: &mut Transaction, line: u64) -> Result<(), Error> {
     let mut sum = 0_i64;
     for p in transaction.postings.iter_mut() {
         if let Some(a) = &p.amount {
@@ -225,13 +214,13 @@ fn close_transaction(transaction: &mut Transaction, line: u64) -> Result<(), Rea
     // If there is no posting with an elided amount, we can't balance the transaction
     if transaction.elided_amount_posting_index.is_none() {
         // we step up a line here because by this point we've moved past the transaction in question
-        return Err(ReaderError::TransactionDoesNotBalance(line));
+        return Err(Error::TransactionDoesNotBalance(line));
     }
 
     let index = transaction.elided_amount_posting_index.unwrap();
 
     match Rc::get_mut(&mut transaction.postings[index]) {
-        None => return Err(ReaderError::TransactionDoesNotBalance(line)),
+        None => return Err(Error::TransactionDoesNotBalance(line)),
         Some(posting) => posting.amount = Some(Amount::new(-sum, "")),
     }
 

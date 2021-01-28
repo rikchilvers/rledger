@@ -1,6 +1,6 @@
 use crate::command::Command;
 use journal::Transaction;
-use reader::ReaderError;
+use reader::Error;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -15,9 +15,9 @@ impl Printer {
 }
 
 impl Command for Printer {
-    fn read_transactions<I>(&mut self, reader: I) -> Result<(), ReaderError>
+    fn read_transactions<I>(&mut self, reader: I) -> Result<(), Error>
     where
-        I: IntoIterator<Item = Result<Rc<RefCell<Transaction>>, ReaderError>>,
+        I: IntoIterator<Item = Result<Rc<RefCell<Transaction>>, Error>>,
     {
         for item in reader {
             match item {

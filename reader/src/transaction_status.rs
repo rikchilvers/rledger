@@ -5,17 +5,17 @@ use nom::{
     IResult,
 };
 
-use journal::TransactionStatus;
+use journal::transaction::Status;
 
-pub fn transaction_status(i: &str) -> IResult<&str, TransactionStatus> {
+pub fn transaction_status(i: &str) -> IResult<&str, Status> {
     nom::combinator::map(
         opt(alt((
-            value(TransactionStatus::Cleared, recognize(tag("*"))),
-            value(TransactionStatus::Uncleared, recognize(tag("!"))),
+            value(Status::Cleared, recognize(tag("*"))),
+            value(Status::Uncleared, recognize(tag("!"))),
         ))),
         |value| match value {
             Some(v) => return v,
-            None => return TransactionStatus::NoStatus,
+            None => return Status::NoStatus,
         },
     )(i)
 }
@@ -26,19 +26,19 @@ mod tests {
 
     #[test]
     fn it_handles_cleared() {
-        assert_eq!(transaction_status("*"), Ok(("", TransactionStatus::Cleared)));
+        assert_eq!(transaction_status("*"), Ok(("", Status::Cleared)));
     }
 
     #[test]
     fn it_handles_uncleared() {
-        assert_eq!(transaction_status("!"), Ok(("", TransactionStatus::Uncleared)));
+        assert_eq!(transaction_status("!"), Ok(("", Status::Uncleared)));
     }
 
     #[test]
     fn it_handles_none() {
         assert_eq!(
             transaction_status("something else"),
-            Ok(("something else", TransactionStatus::NoStatus))
+            Ok(("something else", Status::NoStatus))
         );
     }
 }

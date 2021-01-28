@@ -1,5 +1,7 @@
-use super::{error::ReaderError, source::ParseResult, source::Source};
+use super::{error::Error, source::ParseResult, source::Source};
+
 use journal::Transaction;
+
 use std::{cell::RefCell, collections::HashSet, path::PathBuf, rc::Rc};
 
 pub struct Reader {
@@ -19,7 +21,7 @@ impl Reader {
 }
 
 impl Iterator for Reader {
-    type Item = Result<Rc<RefCell<Transaction>>, ReaderError>;
+    type Item = Result<Rc<RefCell<Transaction>>, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.sources.len() == 0 {

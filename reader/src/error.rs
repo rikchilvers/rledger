@@ -10,7 +10,7 @@ pub enum LineType {
 impl std::fmt::Display for LineType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            LineType::Unknown => write!(f, "an unknown line type"),
+            LineType::Unknown => write!(f, "unknown line type"),
             LineType::Comment => write!(f, "comment"),
             LineType::IncludeDirective => write!(f, "include directive"),
             LineType::TransactionHeader => write!(f, "transaction header"),
@@ -20,7 +20,7 @@ impl std::fmt::Display for LineType {
     }
 }
 
-pub enum ReaderError {
+pub enum Error {
     UnexpectedItem(LineType, u64),
     MissingPosting(u64),
     MissingTransaction(u64),
@@ -30,26 +30,28 @@ pub enum ReaderError {
     Parse(LineType, u64),
 }
 
-impl std::fmt::Display for ReaderError {
+impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ReaderError::UnexpectedItem(item, line) => {
+            Error::UnexpectedItem(item, line) => {
                 write!(f, "Unexpected {} on line {}", item, line)
             }
-            ReaderError::MissingPosting(line) => write!(f, "Missing posting on line {}", line),
-            ReaderError::MissingTransaction(line) => {
+            Error::MissingPosting(line) => {
+                write!(f, "Missing posting on line {}", line)
+            }
+            Error::MissingTransaction(line) => {
                 write!(f, "Missing transaction on line {}", line)
             }
-            ReaderError::TwoPostingsWithElidedAmounts(line) => {
+            Error::TwoPostingsWithElidedAmounts(line) => {
                 write!(f, "Two postings with elided amounts on line {}", line)
             }
-            ReaderError::TransactionDoesNotBalance(line) => {
+            Error::TransactionDoesNotBalance(line) => {
                 write!(f, "Transaction ending on line {} does not balance.", line)
             }
-            ReaderError::IO(e, line) => {
+            Error::IO(e, line) => {
                 write!(f, "An IO error occurred on line {}: {:?}", line, e)
             }
-            ReaderError::Parse(item, line) => {
+            Error::Parse(item, line) => {
                 write!(f, "Failed to parse {} on line {}", item, line)
             }
         }

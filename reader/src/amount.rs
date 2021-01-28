@@ -1,4 +1,3 @@
-use journal::Amount;
 use nom::{
     branch::alt,
     branch::permutation,
@@ -8,6 +7,8 @@ use nom::{
     sequence::{preceded, tuple},
     IResult,
 };
+
+use journal::Amount;
 
 fn amount_from_lexed(lexed: (f64, Option<&str>)) -> Amount {
     Amount {

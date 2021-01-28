@@ -5,13 +5,13 @@ use nom::{
     IResult,
 };
 
+use super::error::Error;
 use super::error::LineType;
-use super::error::ReaderError;
 use super::peek_and_parse::*;
 
 use super::whitespace::*;
 
-pub fn parse_comment(i: &str, line_number: u64) -> Result<Option<&str>, ReaderError> {
+pub fn parse_comment(i: &str, line_number: u64) -> Result<Option<&str>, Error> {
     parse_line(
         i,
         LineType::Comment,

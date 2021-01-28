@@ -1,13 +1,14 @@
-use super::error::LineType;
-use super::error::ReaderError;
-use super::peek_and_parse::{parse_line, peek_and_parse};
 use nom::{bytes::complete::tag, character::complete::space1, combinator::rest, sequence::preceded, IResult};
+
+use super::error::Error;
+use super::error::LineType;
+use super::peek_and_parse::{parse_line, peek_and_parse};
 
 pub fn include(i: &str) -> IResult<&str, &str> {
     preceded(preceded(tag("include"), space1), rest)(i)
 }
 
-pub fn parse_include(i: &str, line_number: u64) -> Result<Option<&str>, ReaderError> {
+pub fn parse_include(i: &str, line_number: u64) -> Result<Option<&str>, Error> {
     parse_line(
         i,
         LineType::IncludeDirective,

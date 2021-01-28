@@ -1,19 +1,20 @@
+use nom::{
+    branch::alt,
+    bytes::complete::tag,
+    character::complete::{multispace0, multispace1},
+    combinator::map_res,
+    combinator::{opt, value},
+    sequence::{delimited, preceded, tuple},
+    IResult,
+};
+
 use super::dates::{date, DateSource};
+use super::error::Error;
 use super::error::LineType;
-use super::error::ReaderError;
 use super::peek_and_parse::*;
+
 use journal::Period;
 use journal::PeriodInterval;
-use nom::branch::alt;
-use nom::bytes::complete::tag;
-use nom::character::complete::{multispace0, multispace1};
-use nom::combinator::map_res;
-use nom::combinator::opt;
-use nom::combinator::value;
-use nom::sequence::delimited;
-use nom::sequence::preceded;
-use nom::sequence::tuple;
-use nom::IResult;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum Direction {
@@ -91,7 +92,7 @@ fn final_date(date: time::Date, source: DateSource) -> time::Date {
     }
 }
 
-pub fn parse_periodic_transaction_header(i: &str, line_number: u64) -> Result<Option<Period>, ReaderError> {
+pub fn parse_periodic_transaction_header(i: &str, line_number: u64) -> Result<Option<Period>, Error> {
     parse_line(
         i,
         LineType::PeriodidTransactionHeader,

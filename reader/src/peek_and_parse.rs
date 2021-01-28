@@ -4,8 +4,8 @@ use nom::{
     IResult,
 };
 
+use super::error::Error;
 use super::error::LineType;
-use super::ReaderError;
 
 /// Peeks at the `marker` and if it succeeds, tries the `parser` (which it will hard fail if
 /// unsuccessful)
@@ -26,12 +26,12 @@ pub fn parse_line<I: Clone, O, E: nom::error::ParseError<I>>(
     line_number: u64,
     // mut parser: impl FnMut(I) -> IResult<I, O, E>,
     mut parser: impl FnMut(I) -> IResult<I, O, E>,
-) -> Result<Option<O>, ReaderError> {
+) -> Result<Option<O>, Error> {
     match parser(input) {
         Ok((_, output)) => return Ok(Some(output)),
         Err(e) => match e {
             nom::Err::Error(_) => Ok(None),
-            nom::Err::Failure(_) => Err(ReaderError::Parse(line_type, line_number)),
+            nom::Err::Failure(_) => Err(Error::Parse(line_type, line_number)),
             nom::Err::Incomplete(_) => unimplemented!(),
         },
     }

@@ -1,11 +1,3 @@
-use super::error::LineType;
-use super::error::ReaderError;
-use super::peek_and_parse::*;
-use super::{comment::comment, dates::date, payee::payee, transaction_status::transaction_status};
-
-use journal::Transaction;
-use journal::TransactionStatus;
-
 use nom::{
     character::complete::{multispace0, multispace1, one_of},
     combinator::{map, opt},
@@ -13,10 +5,18 @@ use nom::{
     IResult,
 };
 
+use super::error::Error;
+use super::error::LineType;
+use super::peek_and_parse::*;
+use super::{comment::comment, dates::date, payee::payee, transaction_status::transaction_status};
+
+use journal::transaction::Status;
+use journal::Transaction;
+
 #[derive(Debug, Eq, PartialEq)]
 pub struct TransactionHeader {
     pub date: time::Date,
-    pub status: TransactionStatus,
+    pub status: Status,
     // TODO this should be optional
     pub payee: String,
     pub comment: Option<String>,
@@ -33,7 +33,7 @@ pub fn transaction_from_header(header: TransactionHeader) -> Transaction {
     }
 }
 
-pub fn parse_transaction_header(i: &str, line_number: u64) -> Result<Option<TransactionHeader>, ReaderError> {
+pub fn parse_transaction_header(i: &str, line_number: u64) -> Result<Option<TransactionHeader>, Error> {
     parse_line(
         i,
         LineType::TransactionHeader,
@@ -50,7 +50,7 @@ pub fn transaction_header(i: &str) -> IResult<&str, TransactionHeader> {
             opt(preceded(multispace1, payee)),
             opt(preceded(multispace0, comment)),
         )),
-        |parsed: ((time::Date, _), Option<TransactionStatus>, Option<&str>, Option<&str>)| {
+        |parsed: ((time::Date, _), Option<Status>, Option<&str>, Option<&str>)| {
             return TransactionHeader {
                 date: parsed.0 .0,
                 status: parsed.1.unwrap_or_default(),
@@ -74,7 +74,7 @@ mod tests {
         let input = "2020-01-01 ; a comment";
         let th = TransactionHeader {
             date,
-            status: TransactionStatus::NoStatus,
+            status: Status::NoStatus,
             payee,
             comment: Some(comment),
         };
@@ -91,7 +91,7 @@ mod tests {
         let input = "2020-01-01 ! ; a comment";
         let th = TransactionHeader {
             date,
-            status: TransactionStatus::Uncleared,
+            status: Status::Uncleared,
             payee,
             comment: Some(comment),
         };
@@ -108,7 +108,7 @@ mod tests {
         let input = "2020-01-01 * a payee ; a comment";
         let th = TransactionHeader {
             date,
-            status: TransactionStatus::Cleared,
+            status: Status::Cleared,
             payee,
             comment: Some(comment),
         };

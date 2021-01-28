@@ -1,11 +1,34 @@
-use super::{transaction_status::TransactionStatus, Posting};
+use super::Posting;
 use std::rc::Rc;
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum Status {
+    NoStatus,
+    Cleared,
+    Uncleared,
+}
+
+impl Default for Status {
+    fn default() -> Self {
+        Status::NoStatus
+    }
+}
+
+impl std::fmt::Display for Status {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Status::NoStatus => write!(f, " "),
+            Status::Cleared => write!(f, "*"),
+            Status::Uncleared => write!(f, "!"),
+        }
+    }
+}
 
 #[derive(Debug)]
 pub struct Transaction {
     pub date: time::Date,
     pub payee: String,
-    pub status: TransactionStatus,
+    pub status: Status,
     pub postings: Vec<Rc<Posting>>,
     pub comments: Vec<String>,
     pub elided_amount_posting_index: Option<usize>,
@@ -16,7 +39,7 @@ impl Transaction {
         Self {
             date: time::Date::try_from_ymd(2020, 01, 01).unwrap(),
             payee: String::from(""),
-            status: TransactionStatus::NoStatus,
+            status: Status::NoStatus,
             postings: vec![],
             comments: vec![],
             elided_amount_posting_index: None,
@@ -62,7 +85,7 @@ mod tests {
         let th = TransactionHeader {
             date: time::Date::try_from_ymd(2020, 01, 01).unwrap(),
             payee: "A Shop".to_owned(),
-            status: TransactionStatus::Cleared,
+            status: Status::Cleared,
             comment: None,
         };
         let ps = vec![Posting {
