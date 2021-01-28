@@ -27,12 +27,10 @@ impl Iterator for Reader {
         }
 
         let mut source = self.sources.pop().unwrap();
-        let parse_result = source.parse_line();
-        match parse_result {
+        match source.parse_line() {
             Err(e) => return Some(Err(e)),
             Ok(parse_result) => match parse_result {
                 ParseResult::SourceComplete => {
-                    self.sources.pop();
                     return self.next();
                 }
                 ParseResult::Transaction(transaction) => {
