@@ -1,3 +1,4 @@
+/// Type of line found in a journal file
 pub enum LineType {
     Unknown,
     Comment,
@@ -20,6 +21,7 @@ impl std::fmt::Display for LineType {
     }
 }
 
+/// Indicates an error during reading of a journal file
 pub enum Error {
     UnexpectedItem(LineType, u64),
     MissingPosting(u64),

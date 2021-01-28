@@ -4,9 +4,11 @@ extern crate reader;
 
 mod command;
 mod print;
+mod stats;
 
 use crate::command::Command;
 use crate::print::Printer;
+use crate::stats::Statistics;
 use reader::Reader;
 
 use clap::{App, Arg};
@@ -25,6 +27,11 @@ fn main() {
                 .value_name("LEDGER_FILE"),
         )
         .subcommand(App::new("print").about("Show transaction entries.").alias("p"))
+        .subcommand(
+            App::new("statistics")
+                .about("Show statistics about the journal.")
+                .aliases(&["stats", "s"]),
+        )
         .get_matches();
 
     if matches.value_of("file").is_none() && matches.occurrences_of("file") == 0 {
@@ -32,9 +39,8 @@ fn main() {
         return;
     }
 
-    let reader = Reader::new(matches.value_of("file").unwrap());
-
     if let Some(_) = matches.subcommand_matches("print") {
+        let reader = Reader::new(matches.value_of("file").unwrap());
         let mut printer = Printer::new();
 
         if let Err(e) = printer.read_transactions(reader) {
@@ -43,5 +49,17 @@ fn main() {
         }
 
         printer.report();
+    }
+
+    if let Some(_) = matches.subcommand_matches("statistics") {
+        let reader = Reader::new(matches.value_of("file").unwrap());
+        let mut stats = Statistics::new();
+
+        if let Err(e) = stats.read_transactions(reader) {
+            println!("{}", e);
+            return;
+        }
+
+        stats.report();
     }
 }

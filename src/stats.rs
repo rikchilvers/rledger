@@ -6,17 +6,17 @@ use reader::Error;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-pub struct Printer {
-    transactions: Vec<Rc<RefCell<Transaction>>>,
+pub struct Statistics {
+    transaction_count: usize,
 }
 
-impl Printer {
+impl Statistics {
     pub fn new() -> Self {
-        Self { transactions: vec![] }
+        Self { transaction_count: 0 }
     }
 }
 
-impl Command for Printer {
+impl Command for Statistics {
     fn read_transactions<I>(&mut self, reader: I) -> Result<(), Error>
     where
         I: IntoIterator<Item = Result<Rc<RefCell<Transaction>>, Error>>,
@@ -24,7 +24,7 @@ impl Command for Printer {
         for item in reader {
             match item {
                 Err(e) => return Err(e),
-                Ok(transaction) => self.transactions.push(transaction),
+                Ok(_) => self.transaction_count += 1,
             }
         }
 
@@ -32,8 +32,6 @@ impl Command for Printer {
     }
 
     fn report(&self) {
-        for transaction in self.transactions.iter() {
-            println!("{}", transaction.borrow());
-        }
+        println!("Transactions:\t{} (X.X per day)", self.transaction_count);
     }
 }
