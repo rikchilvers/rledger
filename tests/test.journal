@@ -1,9 +1,4 @@
-;
-; ---------------------------
-; DO NOT CHANGE THIS FILE
-; ---------------------------
-;
-
+include included.journal
 
 2020-01-01 * Jéby̆
   Assets:Current  £1000
@@ -32,15 +27,6 @@
 2020-01-04 * Cash
   Assets:Current     £-40.00
   Assets:Cash
-
-
-include included.journal
-
-;
-; ---------------------------
-; DO NOT CHANGE THIS FILE
-; ---------------------------
-;
 
 
 ;

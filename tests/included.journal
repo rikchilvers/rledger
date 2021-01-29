@@ -1,9 +1,3 @@
-;
-; ---------------------------
-; DO NOT CHANGE THIS FILE
-; ---------------------------
-;
-
 2020-01-05 A restaurant
     ; a comment in the restaurant posting
     Assets:Current          £-20
@@ -13,14 +7,9 @@
     Assets:Current
     Expenses:Life:Clothing    £50.00
 
-~ monthly from 2021 to 2022
-    Assets:Current
-    Expenses:Life:Clothing      £35
+; ~ monthly from 2021 to 2022
+;     Assets:Current
+;     Expenses:Life:Clothing      £35
 
+; recursive include test
 ; include test.journal
-
-;
-; ---------------------------
-; DO NOT CHANGE THIS FILE
-; ---------------------------
-;
