@@ -19,3 +19,4 @@ mod whitespace;
 
 pub use error::Error;
 pub use reader::Reader;
+pub use time::Date;
