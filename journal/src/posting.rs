@@ -30,6 +30,8 @@ impl PartialEq for Posting {
     }
 }
 
+impl Eq for Posting {}
+
 impl std::fmt::Display for Posting {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut comments: Option<String> = None;
