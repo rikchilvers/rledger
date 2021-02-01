@@ -1,4 +1,6 @@
 use super::Posting;
+
+use std::cmp::Ordering;
 use std::sync::Arc;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -24,7 +26,7 @@ impl std::fmt::Display for Status {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct Transaction {
     pub date: time::Date,
     pub payee: String,
@@ -71,6 +73,18 @@ impl std::fmt::Display for Transaction {
         } else {
             write!(f, "{} {} {}\n{}", self.date, self.status, self.payee, postings)
         }
+    }
+}
+
+impl Ord for Transaction {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.date.cmp(&other.date)
+    }
+}
+
+impl PartialOrd for Transaction {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
     }
 }
 
