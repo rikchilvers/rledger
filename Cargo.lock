@@ -475,6 +475,7 @@ dependencies = [
  "criterion",
  "journal",
  "nom",
+ "rayon",
  "time",
 ]
 

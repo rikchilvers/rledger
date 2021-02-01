@@ -1,3 +1,4 @@
+extern crate rayon;
 extern crate time;
 
 mod account;
