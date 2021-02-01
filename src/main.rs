@@ -40,26 +40,29 @@ fn main() {
     }
 
     if let Some(_) = matches.subcommand_matches("print") {
-        let reader = Reader::new(matches.value_of("file").unwrap());
-        let mut printer = Printer::new();
+        let file = matches.value_of("file").unwrap();
+        let mut reader = Reader::new();
+        // let mut printer = Printer::new();
 
-        if let Err(e) = printer.read_transactions(reader) {
-            println!("{}", e);
-            return;
-        }
+        reader.go(file);
 
-        printer.report();
+        // if let Err(e) = printer.read_transactions(reader) {
+        //     println!("{}", e);
+        //     return;
+        // }
+
+        // printer.report();
     }
 
     if let Some(_) = matches.subcommand_matches("statistics") {
-        let reader = Reader::new(matches.value_of("file").unwrap());
-        let mut stats = Statistics::new();
+        // let reader = Reader::new(matches.value_of("file").unwrap());
+        // let mut stats = Statistics::new();
 
-        if let Err(e) = stats.read_transactions(reader) {
-            println!("{}", e);
-            return;
-        }
+        // if let Err(e) = stats.read_transactions(reader) {
+        //     println!("{}", e);
+        //     return;
+        // }
 
-        stats.report();
+        // stats.report();
     }
 }

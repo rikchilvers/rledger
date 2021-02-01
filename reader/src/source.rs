@@ -24,9 +24,11 @@ pub enum ReaderState {
 
 pub enum ParseResult {
     SourceComplete,
-    IncludeDirective(String),
     Transaction(Arc<Transaction>),
+    IncludeDirective(PathBuf),
 }
+
+use std::sync::mpsc::Sender;
 
 pub struct Source {
     pub location: PathBuf,
@@ -48,6 +50,42 @@ impl Source {
             periodic_transaction: None,
             transaction: None,
             posting: None,
+        }
+    }
+
+    pub fn parse(&mut self, sender: Sender<Result<ParseResult, Error>>) {
+        use std::thread;
+
+        let result = self.parse_line();
+        let mut should_continue = true;
+
+        match &result {
+            Err(_) => println!("sender: error"),
+            Ok(result) => match result {
+                ParseResult::SourceComplete => {
+                    should_continue = false;
+                }
+                ParseResult::IncludeDirective(include) => {
+                    let send = sender.clone();
+                    let include = include.clone();
+                    thread::spawn(move || {
+                        let mut source = Source::new(include);
+                        source.parse(send);
+                    });
+                }
+                ParseResult::Transaction(_) => {}
+            },
+        }
+
+        match sender.send(result) {
+            Ok(_) => {
+                if should_continue {
+                    self.parse(sender);
+                }
+            }
+            Err(_) => {
+                println!("sender: breaking");
+            }
         }
     }
 
@@ -131,7 +169,12 @@ impl Source {
 
                     // Check for an include directive
                     if let Some(include) = parse_include(&line, self.line_number)? {
-                        return Ok(ParseResult::IncludeDirective(include.to_owned()));
+                        match self.location.clone().parent() {
+                            None => panic!("no parent"),
+                            Some(parent) => {
+                                return Ok(ParseResult::IncludeDirective(parent.join(include)));
+                            }
+                        }
                     }
 
                     // Check for a period transaction header
