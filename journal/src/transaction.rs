@@ -1,5 +1,5 @@
 use super::Posting;
-use std::rc::Rc;
+use std::sync::Arc;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Status {
@@ -29,7 +29,7 @@ pub struct Transaction {
     pub date: time::Date,
     pub payee: String,
     pub status: Status,
-    pub postings: Vec<Rc<Posting>>,
+    pub postings: Vec<Arc<Posting>>,
     pub comments: Vec<String>,
     pub elided_amount_posting_index: Option<usize>,
 }

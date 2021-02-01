@@ -12,7 +12,7 @@ use super::{
 use journal::{Amount, PeriodicTransaction, Posting, Transaction};
 
 use std::path::PathBuf;
-use std::rc::Rc;
+use std::sync::Arc;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum ReaderState {
@@ -24,8 +24,8 @@ pub enum ReaderState {
 
 pub enum ParseResult {
     SourceComplete,
-    Transaction(Rc<Transaction>),
     IncludeDirective(String),
+    Transaction(Arc<Transaction>),
 }
 
 pub struct Source {
@@ -34,7 +34,7 @@ pub struct Source {
     line_number: u64,
     state: ReaderState,
     periodic_transaction: Option<PeriodicTransaction>,
-    transaction: Option<Rc<Transaction>>,
+    transaction: Option<Arc<Transaction>>,
     posting: Option<Posting>,
 }
 
@@ -63,7 +63,7 @@ impl Source {
 
                     close_transaction(transaction, self.line_number - 1)?;
 
-                    return Ok(ParseResult::Transaction(Rc::clone(&transaction)));
+                    return Ok(ParseResult::Transaction(Arc::clone(&transaction)));
                 }
 
                 return Ok(ParseResult::SourceComplete);
@@ -88,7 +88,7 @@ impl Source {
                             ReaderState::InTransaction => match &mut self.transaction {
                                 None => return Err(Error::MissingTransaction(self.line_number)),
                                 Some(transaction) => {
-                                    if let Some(transaction) = Rc::get_mut(transaction) {
+                                    if let Some(transaction) = Arc::get_mut(transaction) {
                                         transaction.comments.push(comment.to_owned())
                                     }
                                 }
@@ -113,7 +113,7 @@ impl Source {
                             add_posting_to_transaction(transaction, posting, self.line_number - 1)?;
                         }
 
-                        // posting.transaction = Some(Rc::downgrade(self.transaction));
+                        // posting.transaction = Some(Arc::downgrade(self.transaction));
                         self.posting = Some(posting);
 
                         return self.parse_line();
@@ -164,18 +164,18 @@ impl Source {
 
             close_transaction(transaction, self.line_number - 1)?;
 
-            let completed_transaction = Rc::clone(transaction);
+            let completed_transaction = Arc::clone(transaction);
 
             match header {
-                Some(header) => self.transaction = Some(Rc::new(transaction_from_header(header))),
-                None => self.transaction = Some(Rc::new(Transaction::new())),
+                Some(header) => self.transaction = Some(Arc::new(transaction_from_header(header))),
+                None => self.transaction = Some(Arc::new(Transaction::new())),
             }
 
             return Ok(ParseResult::Transaction(completed_transaction));
         } else {
             match header {
-                Some(header) => self.transaction = Some(Rc::new(transaction_from_header(header))),
-                None => self.transaction = Some(Rc::new(Transaction::new())),
+                Some(header) => self.transaction = Some(Arc::new(transaction_from_header(header))),
+                None => self.transaction = Some(Arc::new(Transaction::new())),
             }
 
             return self.parse_line();
@@ -183,8 +183,8 @@ impl Source {
     }
 }
 
-fn add_posting_to_transaction(transaction: &mut Rc<Transaction>, posting: Posting, line: u64) -> Result<(), Error> {
-    match Rc::get_mut(transaction) {
+fn add_posting_to_transaction(transaction: &mut Arc<Transaction>, posting: Posting, line: u64) -> Result<(), Error> {
+    match Arc::get_mut(transaction) {
         None => unimplemented!(),
         Some(transaction) => {
             if posting.amount.is_none() {
@@ -195,7 +195,7 @@ fn add_posting_to_transaction(transaction: &mut Rc<Transaction>, posting: Postin
                 transaction.elided_amount_posting_index = Some(index);
             }
 
-            transaction.postings.push(Rc::new(posting));
+            transaction.postings.push(Arc::new(posting));
 
             return Ok(());
         }
@@ -203,8 +203,8 @@ fn add_posting_to_transaction(transaction: &mut Rc<Transaction>, posting: Postin
 }
 
 /// Returns true if the transaction was closed
-fn close_transaction(transaction: &mut Rc<Transaction>, line: u64) -> Result<(), Error> {
-    match Rc::get_mut(transaction) {
+fn close_transaction(transaction: &mut Arc<Transaction>, line: u64) -> Result<(), Error> {
+    match Arc::get_mut(transaction) {
         None => unimplemented!(),
         Some(transaction) => {
             let mut sum = 0_i64;
@@ -226,7 +226,7 @@ fn close_transaction(transaction: &mut Rc<Transaction>, line: u64) -> Result<(),
 
             let index = transaction.elided_amount_posting_index.unwrap();
 
-            match Rc::get_mut(&mut transaction.postings[index]) {
+            match Arc::get_mut(&mut transaction.postings[index]) {
                 None => return Err(Error::TransactionDoesNotBalance(line)),
                 Some(posting) => posting.amount = Some(Amount::new(-sum, "")),
             }

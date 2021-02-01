@@ -2,7 +2,7 @@ use super::{error::Error, source::ParseResult, source::Source};
 
 use journal::Transaction;
 
-use std::{collections::HashSet, path::PathBuf, rc::Rc};
+use std::{collections::HashSet, path::PathBuf, sync::Arc};
 
 pub struct Reader {
     sources: Vec<Source>,
@@ -21,7 +21,7 @@ impl Reader {
 }
 
 impl Iterator for Reader {
-    type Item = Result<Rc<Transaction>, Error>;
+    type Item = Result<Arc<Transaction>, Error>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.sources.len() == 0 {

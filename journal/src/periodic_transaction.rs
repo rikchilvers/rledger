@@ -1,6 +1,5 @@
 use super::Transaction;
-use std::cell::RefCell;
-use std::rc::Rc;
+use std::sync::Arc;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PeriodInterval {
@@ -24,17 +23,17 @@ pub struct Period {
 #[derive(Debug)]
 pub struct PeriodicTransaction {
     period: Period,
-    transaction: Rc<RefCell<Transaction>>,
+    transaction: Arc<Transaction>,
 }
 
 impl PeriodicTransaction {
-    pub fn run(&self, start_date: time::Date) -> Vec<Rc<RefCell<Transaction>>> {
+    pub fn run(&self, start_date: time::Date) -> Vec<Arc<Transaction>> {
         unimplemented!();
         /*
         match self.period.interval {
             PeriodInterval::Budget => {
                 self.transaction.borrow_mut().date = start_date;
-                return vec![Rc::clone(&self.transaction)];
+                return vec![Arc::clone(&self.transaction)];
             }
             _ => return vec![],
         }

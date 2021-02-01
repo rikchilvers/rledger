@@ -3,16 +3,16 @@
 use std::{
     fs::File,
     io::{self, prelude::*},
-    rc::Rc,
+    sync::Arc,
 };
 
 pub struct BufReader {
     reader: io::BufReader<File>,
-    buffer: Rc<String>,
+    buffer: Arc<String>,
 }
 
-fn new_buffer() -> Rc<String> {
-    Rc::new(String::with_capacity(1024)) // Tweakable capacity
+fn new_buffer() -> Arc<String> {
+    Arc::new(String::with_capacity(1024)) // Tweakable capacity
 }
 
 impl BufReader {
@@ -26,17 +26,17 @@ impl BufReader {
 }
 
 impl Iterator for BufReader {
-    type Item = io::Result<Rc<String>>;
+    type Item = io::Result<Arc<String>>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let buffer = match Rc::get_mut(&mut self.buffer) {
+        let buffer = match Arc::get_mut(&mut self.buffer) {
             Some(buffer) => {
                 buffer.clear();
                 buffer
             }
             None => {
                 self.buffer = new_buffer();
-                Rc::make_mut(&mut self.buffer)
+                Arc::make_mut(&mut self.buffer)
             }
         };
 
@@ -47,7 +47,7 @@ impl Iterator for BufReader {
                     return None;
                 }
 
-                if let Some(r) = Rc::get_mut(&mut self.buffer) {
+                if let Some(r) = Arc::get_mut(&mut self.buffer) {
                     // drop the newline
                     if r.as_bytes().last() == Some(&10) {
                         r.pop();
@@ -56,7 +56,7 @@ impl Iterator for BufReader {
                     panic!("couldn't take reader buffer as mutable");
                 }
 
-                return Some(Rc::clone(&self.buffer));
+                return Some(Arc::clone(&self.buffer));
             })
             .transpose()
     }

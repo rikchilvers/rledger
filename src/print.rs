@@ -3,10 +3,10 @@ use crate::command::Command;
 use journal::Transaction;
 use reader::Error;
 
-use std::rc::Rc;
+use std::sync::Arc;
 
 pub struct Printer {
-    transactions: Vec<Rc<Transaction>>,
+    transactions: Vec<Arc<Transaction>>,
 }
 
 impl Printer {
@@ -18,7 +18,7 @@ impl Printer {
 impl Command for Printer {
     fn read_transactions<I>(&mut self, reader: I) -> Result<(), Error>
     where
-        I: IntoIterator<Item = Result<Rc<Transaction>, Error>>,
+        I: IntoIterator<Item = Result<Arc<Transaction>, Error>>,
     {
         for item in reader {
             match item {

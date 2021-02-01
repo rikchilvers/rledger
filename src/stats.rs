@@ -4,7 +4,7 @@ use journal::Transaction;
 use reader::Date;
 use reader::Error;
 
-use std::rc::Rc;
+use std::sync::Arc;
 
 pub struct Statistics {
     start_date: Date,
@@ -21,7 +21,7 @@ impl Statistics {
         }
     }
 
-    fn process_transaction(&mut self, transaction: Rc<Transaction>) {
+    fn process_transaction(&mut self, transaction: Arc<Transaction>) {
         self.transaction_count += 1;
 
         if transaction.date.lt(&self.start_date) {
@@ -37,7 +37,7 @@ impl Statistics {
 impl Command for Statistics {
     fn read_transactions<I>(&mut self, reader: I) -> Result<(), Error>
     where
-        I: IntoIterator<Item = Result<Rc<Transaction>, Error>>,
+        I: IntoIterator<Item = Result<Arc<Transaction>, Error>>,
     {
         for item in reader {
             match item {

@@ -1,12 +1,12 @@
 use crate::journal::Transaction;
 use crate::reader::Error;
 
-use std::rc::Rc;
+use std::sync::Arc;
 
 pub trait Command {
     fn read_transactions<I>(&mut self, reader: I) -> Result<(), Error>
     where
-        I: IntoIterator<Item = Result<Rc<Transaction>, Error>>;
+        I: IntoIterator<Item = Result<Arc<Transaction>, Error>>;
 
     fn report(&self);
 }
