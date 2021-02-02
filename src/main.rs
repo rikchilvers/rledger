@@ -40,11 +40,14 @@ fn main() {
     }
 
     if let Some(_) = matches.subcommand_matches("print") {
-        let file = matches.value_of("file").unwrap();
+        let file = matches.value_of("file").unwrap().to_owned();
         let mut reader = Reader::new();
         // let mut printer = Printer::new();
 
-        reader.go(file);
+        let transactions = reader.read(file);
+        for t in transactions {
+            println!("{}", t)
+        }
 
         // if let Err(e) = printer.read_transactions(reader) {
         //     println!("{}", e);

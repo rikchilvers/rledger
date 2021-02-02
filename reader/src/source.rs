@@ -12,7 +12,9 @@ use super::{
 use journal::{Amount, PeriodicTransaction, Posting, Transaction};
 
 use std::path::PathBuf;
+use std::sync::mpsc::Sender;
 use std::sync::Arc;
+use std::thread;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum ReaderState {
@@ -25,13 +27,11 @@ pub enum ReaderState {
 pub enum ParseResult {
     SourceComplete,
     Transaction(Arc<Transaction>),
-    IncludeDirective(PathBuf),
+    IncludeDirective(Arc<PathBuf>),
 }
 
-use std::sync::mpsc::Sender;
-
 pub struct Source {
-    pub location: PathBuf,
+    pub location: Arc<PathBuf>,
     contents: BufReader,
     line_number: u64,
     state: ReaderState,
@@ -43,7 +43,7 @@ pub struct Source {
 impl Source {
     pub fn new(path: PathBuf) -> Self {
         Self {
-            location: path.clone(),
+            location: Arc::new(path.clone()),
             contents: BufReader::open(path).unwrap(),
             line_number: 0,
             state: ReaderState::None,
@@ -54,8 +54,6 @@ impl Source {
     }
 
     pub fn parse(&mut self, sender: Sender<Result<ParseResult, Error>>) {
-        use std::thread;
-
         let result = self.parse_line();
         let mut should_continue = true;
 
@@ -69,7 +67,7 @@ impl Source {
                     let send = sender.clone();
                     let include = include.clone();
                     thread::spawn(move || {
-                        let mut source = Source::new(include);
+                        let mut source = Source::new((&include).to_path_buf());
                         source.parse(send);
                     });
                 }
@@ -172,7 +170,7 @@ impl Source {
                         match self.location.clone().parent() {
                             None => panic!("no parent"),
                             Some(parent) => {
-                                return Ok(ParseResult::IncludeDirective(parent.join(include)));
+                                return Ok(ParseResult::IncludeDirective(Arc::new(parent.join(include))));
                             }
                         }
                     }
