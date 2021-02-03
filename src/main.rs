@@ -1,5 +1,6 @@
 extern crate clap;
 extern crate journal;
+extern crate naive_reader;
 extern crate reader;
 
 mod command;
@@ -9,7 +10,9 @@ mod stats;
 use crate::command::Command;
 use crate::print::Printer;
 use crate::stats::Statistics;
-use reader::Reader;
+// use reader::Reader;
+
+use naive_reader::reader::Reader;
 
 use clap::{App, Arg};
 
@@ -40,6 +43,13 @@ fn main() {
     }
 
     if let Some(_) = matches.subcommand_matches("print") {
+        let file = matches.value_of("file").unwrap();
+        let reader = Reader::new();
+        reader.read(file);
+    }
+
+    /*
+    if let Some(_) = matches.subcommand_matches("print") {
         let file = matches.value_of("file").unwrap().to_owned();
         let mut reader = Reader::new();
         // let mut printer = Printer::new();
@@ -56,6 +66,7 @@ fn main() {
 
         // printer.report();
     }
+    */
 
     if let Some(_) = matches.subcommand_matches("statistics") {
         // let reader = Reader::new(matches.value_of("file").unwrap());
