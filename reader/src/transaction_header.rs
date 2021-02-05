@@ -26,6 +26,7 @@ pub fn transaction_from_header(header: TransactionHeader) -> Transaction {
     Transaction {
         date: header.date,
         status: header.status,
+        header_comment: None,
         payee: header.payee,
         postings: vec![],
         comments: vec![],

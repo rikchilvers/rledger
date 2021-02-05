@@ -8,6 +8,7 @@ impl Amount {
     pub fn new(quantity: i64, commodity: &str) -> Self {
         Amount {
             quantity,
+            // TODO: have new take a String
             commodity: commodity.to_owned(),
         }
     }

@@ -5,6 +5,7 @@ use std::sync::Arc;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Status {
+    // TODO: change to None
     NoStatus,
     Cleared,
     Uncleared,
@@ -29,8 +30,10 @@ impl std::fmt::Display for Status {
 #[derive(Debug, PartialEq, Eq)]
 pub struct Transaction {
     pub date: time::Date,
+    // TODO: This should be optional
     pub payee: String,
     pub status: Status,
+    pub header_comment: Option<String>,
     pub postings: Vec<Arc<Posting>>,
     pub comments: Vec<String>,
     pub elided_amount_posting_index: Option<usize>,
@@ -40,8 +43,9 @@ impl Transaction {
     pub fn new() -> Self {
         Self {
             date: time::Date::try_from_ymd(2020, 01, 01).unwrap(),
-            payee: String::from(""),
             status: Status::NoStatus,
+            payee: String::from(""),
+            header_comment: None,
             postings: vec![],
             comments: vec![],
             elided_amount_posting_index: None,
