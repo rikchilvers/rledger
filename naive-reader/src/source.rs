@@ -1,20 +1,8 @@
-use std::iter::Peekable;
-use std::path::Path;
-use std::path::PathBuf;
-use std::str::Chars;
-use std::sync::mpsc::Sender;
-use std::sync::Arc;
-use std::thread;
+use std::{iter::Peekable, path::Path, path::PathBuf, str::Chars, sync::mpsc::Sender, sync::Arc, thread};
 
-use journal::transaction::Status;
-use journal::Amount;
-use journal::Posting;
-use journal::Transaction;
+use journal::{transaction::Status, Amount, Posting, Transaction};
 
-use super::bufreader::BufReader;
-use super::error::Error;
-use super::error::LineType;
-use super::transaction_header::TransactionHeader;
+use super::{bufreader::BufReader, error::Error, error::LineType};
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 enum State {
@@ -34,9 +22,9 @@ pub struct Source {
     location: Arc<PathBuf>,
     contents: BufReader,
     state: State,
+    line_number: u64,
     transaction: Option<Arc<Transaction>>,
     posting: Option<Posting>,
-    line_number: u64,
 }
 
 impl Source {
@@ -45,9 +33,9 @@ impl Source {
             location: Arc::new(path.into()),
             contents: BufReader::open(path).unwrap(),
             state: State::None,
+            line_number: 0,
             transaction: None,
             posting: None,
-            line_number: 0,
         }
     }
 
@@ -56,14 +44,10 @@ impl Source {
         let mut should_continue = true;
 
         match &result {
-            Err(e) => {
-                println!("parser error: {}", e);
-                return;
-            }
+            Err(_) => should_continue = false,
             Ok(result) => match result {
-                ParseResult::SourceComplete => {
-                    should_continue = false;
-                }
+                ParseResult::Transaction(_) => {}
+                ParseResult::SourceComplete => should_continue = false,
                 ParseResult::IncludeDirective(include) => {
                     let send = sender.clone();
                     let include = include.clone();
@@ -72,7 +56,6 @@ impl Source {
                         source.parse(send);
                     });
                 }
-                ParseResult::Transaction(_) => {}
             },
         }
 
@@ -82,8 +65,8 @@ impl Source {
                     self.parse(sender);
                 }
             }
-            Err(_) => {
-                println!("sender: breaking");
+            Err(e) => {
+                println!("Error while parsing: {}", e);
             }
         }
     }
@@ -106,8 +89,7 @@ impl Source {
                 return Ok(ParseResult::SourceComplete);
             }
             Some(line) => match line {
-                // TODO: handle this error
-                Err(e) => panic!("{}", e),
+                Err(e) => return Err(Error::IO(e, self.line_number)),
                 Ok(line) => {
                     self.line_number += 1;
 
@@ -139,27 +121,30 @@ impl Source {
                             }
                             self.state = State::InTransaction;
 
-                            let transaction = self.lex_transaction_header(&mut iter)?;
+                            let transaction = self.parse_transaction_header(&mut iter)?;
                             self.finish_transaction(Some(transaction))
                         }
 
                         // Posting or comment
                         Some(c) if c.is_whitespace() => {
                             if consume_space(&mut iter) < 2 {
-                                panic!("not enough spaces beginning line {}", self.line_number)
+                                return Err(Error::IncorrectFormatting(
+                                    "not enough spaces beginning line".to_string(),
+                                    self.line_number,
+                                ));
                             }
 
-                            // TODO: add new error type for this
-                            let next = iter
-                                .peek()
-                                .ok_or(Error::UnexpectedItem(LineType::Comment, self.line_number))?;
+                            let next = iter.peek().ok_or(Error::IncorrectFormatting(
+                                "not enough remaining characters".to_string(),
+                                self.line_number,
+                            ))?;
 
                             // Handle comment
                             if is_comment_indicator(next) {
                                 // Advance past the comment indicator
                                 iter.next();
 
-                                match self.lex_comment(&mut iter) {
+                                match self.parse_comment(&mut iter) {
                                     None => return self.parse_line(),
                                     Some(comment) => match self.state {
                                         State::InPosting => match &mut self.posting {
@@ -190,7 +175,7 @@ impl Source {
                             }
                             self.state = State::InPosting;
 
-                            let posting = self.lex_posting(&mut iter)?;
+                            let posting = self.parse_posting(&mut iter)?;
 
                             // If we're already in a posting, we need to add it to the current transaction
                             // We haven't done this already because we might need to add following comments first
@@ -206,7 +191,7 @@ impl Source {
 
                         // Include directive
                         Some(c) if c == &'i' => {
-                            let include = self.lex_include_directive(&mut iter)?;
+                            let include = self.parse_include_directive(&mut iter)?;
                             match self.location.clone().parent() {
                                 None => panic!("no parent"),
                                 Some(parent) => {
@@ -219,6 +204,7 @@ impl Source {
                         Some(c) if c == &';' => self.parse_line(),
 
                         // Periodic transaction
+                        // TODO handle periodic transactions
                         Some(c) if c == &'~' => {
                             unimplemented!();
                         }
@@ -260,7 +246,7 @@ impl Source {
         }
     }
 
-    fn lex_include_directive(&mut self, iter: &mut Peekable<Chars>) -> Result<String, Error> {
+    fn parse_include_directive(&mut self, iter: &mut Peekable<Chars>) -> Result<String, Error> {
         let include = take_to_space(iter);
         if include != "include" {
             return Err(Error::Parse(LineType::IncludeDirective, self.line_number));
@@ -268,7 +254,7 @@ impl Source {
         Ok(take_to_end(iter))
     }
 
-    fn lex_transaction_header(&mut self, iter: &mut Peekable<Chars>) -> Result<Transaction, Error> {
+    fn parse_transaction_header(&mut self, iter: &mut Peekable<Chars>) -> Result<Transaction, Error> {
         let date = self.parse_date(take_to_space(iter))?;
 
         let mut transaction = Transaction::new();
@@ -290,7 +276,7 @@ impl Source {
         }
 
         transaction.payee = take_to_comment_or_end(iter);
-        transaction.header_comment = self.lex_comment(iter);
+        transaction.header_comment = self.parse_comment(iter);
 
         return Ok(transaction);
     }
@@ -323,7 +309,7 @@ impl Source {
         .map_err(|_| Error::Parse(LineType::TransactionHeader, self.line_number));
     }
 
-    fn lex_posting(&mut self, iter: &mut Peekable<Chars>) -> Result<Posting, Error> {
+    fn parse_posting(&mut self, iter: &mut Peekable<Chars>) -> Result<Posting, Error> {
         let account = take_to_multispace(iter);
 
         consume_space(iter);
@@ -356,7 +342,7 @@ impl Source {
     }
 
     /// If the comment's length is 0, this will return None
-    fn lex_comment(&mut self, iter: &mut Peekable<Chars>) -> Option<String> {
+    fn parse_comment(&mut self, iter: &mut Peekable<Chars>) -> Option<String> {
         consume_space(iter);
         let comment = take_to_end(iter);
         match comment.len() {

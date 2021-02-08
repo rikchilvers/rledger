@@ -1,3 +1,6 @@
+use std::path::PathBuf;
+use std::sync::Arc;
+
 /// Type of line found in a journal file
 pub enum LineType {
     Unknown,
@@ -23,6 +26,8 @@ impl std::fmt::Display for LineType {
 
 /// Indicates an error during reading of a journal file
 pub enum Error {
+    IncorrectFormatting(String, u64),
+    DuplicateSource(Arc<PathBuf>),
     UnexpectedItem(LineType, u64),
     MissingPosting(u64),
     MissingTransaction(u64),
@@ -55,6 +60,12 @@ impl std::fmt::Display for Error {
             }
             Error::Parse(item, line) => {
                 write!(f, "Failed to parse {} on line {}", item, line)
+            }
+            Error::DuplicateSource(path) => {
+                write!(f, "Found cyclic import of {:?}", path.as_path())
+            }
+            Error::IncorrectFormatting(desc, line) => {
+                write!(f, "Incorrect formatting on line {}: {}", line, desc)
             }
         }
     }

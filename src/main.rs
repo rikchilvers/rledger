@@ -45,8 +45,13 @@ fn main() {
     if let Some(_) = matches.subcommand_matches("print") {
         let file = matches.value_of("file").unwrap().to_owned();
         let mut reader = Reader::new();
-        for t in reader.read(file) {
-            println!("{}", t)
+        match reader.read(file) {
+            Err(e) => println!("{}", e),
+            Ok(transactions) => {
+                for transaction in transactions {
+                    println!("{}", transaction)
+                }
+            }
         }
     }
 

@@ -20,7 +20,7 @@ impl Reader {
     }
 
     // TODO: make this take things that are into<pathbuf>
-    pub fn read(&mut self, location: String) -> Vec<Arc<Transaction>> {
+    pub fn read(&mut self, location: String) -> Result<Vec<Arc<Transaction>>, Error> {
         let (send, recv) = mpsc::channel();
 
         thread::spawn(move || {
@@ -32,12 +32,13 @@ impl Reader {
 
         for t in recv {
             match t {
-                Err(_) => panic!("err"),
+                Err(e) => return Err(e),
                 Ok(r) => match r {
                     ParseResult::Transaction(t) => transactions.push(Arc::clone(&t)),
-                    ParseResult::IncludeDirective(l) => {
-                        if !self.visited_sources.insert(l) {
-                            panic!("already had that file")
+                    ParseResult::IncludeDirective(include) => {
+                        let to_insert = Arc::clone(&include);
+                        if !self.visited_sources.insert(to_insert) {
+                            return Err(Error::DuplicateSource(include));
                         }
                     }
                     _ => {}
@@ -47,6 +48,6 @@ impl Reader {
 
         &transactions.par_sort_unstable();
 
-        return transactions;
+        return Ok(transactions);
     }
 }
