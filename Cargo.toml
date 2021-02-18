@@ -8,8 +8,7 @@ edition = "2018"
 
 [dependencies]
 journal = { path = "journal" }
-reader = { path = "reader" }
-naive-reader = { path = "naive-reader" }
+reader = { path = "naive-reader" }
 clap = "2"
 
 # https://lemmy.ml/post/50089

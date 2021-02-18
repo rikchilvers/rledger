@@ -1,5 +1,5 @@
 use crate::journal::Transaction;
-use crate::reader::Error;
+use crate::reader::error::Error;
 
 use std::sync::Arc;
 

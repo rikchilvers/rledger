@@ -1,7 +1,7 @@
 use crate::command::Command;
 
 use journal::Transaction;
-use reader::Error;
+use reader::error::Error;
 
 use std::sync::Arc;
 

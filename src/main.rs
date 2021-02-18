@@ -1,6 +1,5 @@
 extern crate clap;
 extern crate journal;
-extern crate naive_reader;
 extern crate reader;
 
 mod command;
@@ -10,9 +9,9 @@ mod stats;
 use crate::command::Command;
 use crate::print::Printer;
 use crate::stats::Statistics;
-// use reader::Reader;
+// use reader::Reade
 
-use naive_reader::reader::Reader;
+use reader::reader::Reader;
 
 use clap::{App, Arg};
 
