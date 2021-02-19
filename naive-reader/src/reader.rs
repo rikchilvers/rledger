@@ -1,5 +1,6 @@
 use super::{error::Error, error::ErrorKind, source::ItemKind, source::ParsedItem, source::Source};
 
+use journal::Posting;
 use journal::Transaction;
 
 use std::sync::mpsc;
@@ -20,7 +21,7 @@ impl Reader {
     }
 
     // TODO: make this take things that are into<pathbuf>
-    pub fn read(&mut self, location: String) -> Result<Vec<Arc<Transaction>>, Error> {
+    pub fn read(&mut self, location: String) -> Result<(Vec<Transaction>, Vec<Posting>), Error> {
         let (send, recv) = mpsc::channel();
 
         thread::spawn(move || {
@@ -29,12 +30,16 @@ impl Reader {
         });
 
         let mut transactions = Vec::with_capacity(2046);
+        let mut postings = Vec::with_capacity(2046);
 
         for t in recv {
             match t {
                 Err(e) => return Err(e),
                 Ok(r) => match r.kind {
-                    ItemKind::Transaction(t) => transactions.push(Arc::clone(&t)),
+                    ItemKind::Transaction(t, mut p) => {
+                        transactions.push(t);
+                        postings.append(&mut p);
+                    }
                     ItemKind::IncludeDirective(include) => {
                         let to_insert = Arc::clone(&include);
                         if !self.visited_sources.insert(to_insert) {
@@ -53,6 +58,6 @@ impl Reader {
 
         &transactions.par_sort_unstable();
 
-        return Ok(transactions);
+        return Ok((transactions, postings));
     }
 }

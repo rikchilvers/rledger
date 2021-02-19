@@ -46,7 +46,7 @@ fn main() {
         let mut reader = Reader::new();
         match reader.read(file) {
             Err(e) => println!("{}", e),
-            Ok(transactions) => {
+            Ok((transactions, _)) => {
                 for transaction in transactions {
                     println!("{}", transaction)
                 }

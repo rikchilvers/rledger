@@ -23,7 +23,7 @@ pub struct ParsedItem {
 
 pub enum ItemKind {
     SourceComplete,
-    Transaction(Arc<Transaction>),
+    Transaction(Transaction, Vec<Posting>),
     IncludeDirective(Arc<PathBuf>),
 }
 
@@ -73,7 +73,7 @@ impl Source {
         match &result {
             Err(_) => should_continue = false,
             Ok(result) => match &result.kind {
-                ItemKind::Transaction(_) => {}
+                ItemKind::Transaction(_, _) => {}
                 ItemKind::SourceComplete => should_continue = false,
                 ItemKind::IncludeDirective(include) => {
                     let send = sender.clone();
@@ -99,32 +99,40 @@ impl Source {
     }
 
     /// Add any postings to the transaction and return it wrapped in an Arc
-    fn link_transaction(&mut self) -> Option<Result<ParsedItem, ErrorKind>> {
+    fn close_transaction(&mut self) -> Option<Result<ParsedItem, ErrorKind>> {
         match self.transaction.take() {
             None => return None,
             Some(transaction) => {
-                let mut wrapped_transaction = Arc::new(transaction);
-                // We need another copy to clone during the loops
-                let clone = Arc::clone(&wrapped_transaction);
+                let mut elided_index = None;
+                let mut sum = 0_i64;
+                let mut postings = Vec::with_capacity(self.postings.len());
 
-                match Arc::get_mut(&mut wrapped_transaction) {
-                    None => panic!("could not get mut access to wrapped transaction"),
-                    Some(t) => {
-                        // Add any postings to the transaction
-                        for mut posting in self.postings.drain(0..) {
-                            posting.transaction = Some(Arc::downgrade(&clone));
-                            if !t.add_posting(posting) {
+                for (i, posting) in self.postings.drain(0..).enumerate() {
+                    match &posting.amount {
+                        Some(amount) => sum += amount.quantity,
+                        None => {
+                            if elided_index.is_some() {
                                 return Some(Err(ErrorKind::TwoPostingsWithElidedAmounts));
                             }
-                        }
-
-                        if !t.close() {
-                            return Some(Err(ErrorKind::TransactionDoesNotBalance));
+                            elided_index = Some(i);
                         }
                     }
+                    postings.push(posting);
                 }
 
-                return Some(Ok(self.new_item(ItemKind::Transaction(wrapped_transaction))));
+                // The transaction is balanced so return it
+                if sum == 0 {
+                    return Some(Ok(self.new_item(ItemKind::Transaction(transaction, postings))));
+                }
+
+                match elided_index {
+                    // If there is no posting with an elided amount, we can't balance the transaction
+                    None => return Some(Err(ErrorKind::TransactionDoesNotBalance)),
+                    // TODO assign a commodity to this amount
+                    Some(i) => postings[i].amount = Some(Amount::new(-sum, "")),
+                }
+
+                return Some(Ok(self.new_item(ItemKind::Transaction(transaction, postings))));
             }
         }
     }
@@ -133,7 +141,7 @@ impl Source {
         match self.contents.next() {
             None => {
                 // If the source is complete, we need to finish the last transactions
-                if let Some(result) = self.link_transaction() {
+                if let Some(result) = self.close_transaction() {
                     return result.map_err(|kind| self.new_error(kind));
                 }
 
@@ -150,7 +158,7 @@ impl Source {
                         // Empty line
                         None => {
                             // If the line is empty, we need to finish the previous transaction
-                            if let Some(result) = self.link_transaction() {
+                            if let Some(result) = self.close_transaction() {
                                 return result.map_err(|kind| self.new_error(kind));
                             }
 
@@ -167,7 +175,7 @@ impl Source {
 
                             let new_transaction = self.parse_transaction_header(&mut iter)?;
 
-                            if let Some(result) = self.link_transaction() {
+                            if let Some(result) = self.close_transaction() {
                                 self.transaction = Some(new_transaction);
                                 return result.map_err(|kind| self.new_error(kind));
                             } else {
@@ -254,42 +262,6 @@ impl Source {
                 }
             },
         }
-    }
-
-    /// Handles closing the previous transaction (if there was one) and starting a new one
-    fn finish_transaction(&mut self, new_transaction: Option<Transaction>) -> Result<ParsedItem, Error> {
-        unimplemented!();
-
-        /*
-        // If we had a previous transaction, we need to close it now we're starting a new one
-        if let Some(transaction) = &mut self.transaction.take() {
-            if let Some(posting) = self.posting.take() {
-                if !transaction.add_posting(posting) {
-                    return Err(self.new_error(ErrorKind::TwoPostingsWithElidedAmounts));
-                }
-
-                if !transaction.close() {
-                    return Err(self.new_error(ErrorKind::TransactionDoesNotBalance));
-                }
-            }
-
-            let completed_transaction = Arc::clone(transaction);
-
-            match new_transaction {
-                Some(new_transaction) => self.transaction = Some(Arc::new(new_transaction)),
-                None => self.transaction = Some(Arc::new(Transaction::new())),
-            }
-
-            return Ok(self.new_item(ItemKind::Transaction(completed_transaction)));
-        } else {
-            match new_transaction {
-                Some(new_transaction) => self.transaction = Some(Arc::new(new_transaction)),
-                None => self.transaction = Some(Arc::new(Transaction::new())),
-            }
-
-            return self.parse_line();
-        }
-        */
     }
 
     fn parse_include_directive(&mut self, iter: &mut Peekable<Chars>) -> Result<String, Error> {
@@ -398,63 +370,7 @@ impl Source {
     }
 }
 
-/*
-fn add_posting_to_transaction(transaction: &mut Arc<Transaction>, posting: Posting, line: u64) -> Result<(), Error> {
-    match Arc::get_mut(transaction) {
-        None => unimplemented!(),
-        Some(transaction) => {
-            if posting.amount.is_none() {
-                if transaction.elided_amount_posting_index.is_some() {
-                    return Err(Error::TwoPostingsWithElidedAmounts(line, Arc::clone(&self.location)));
-                }
-                let index = transaction.postings.len();
-                transaction.elided_amount_posting_index = Some(index);
-            }
-
-            transaction.postings.push(Arc::new(posting));
-
-            return Ok(());
-        }
-    }
-}
-*/
-
-/*
-/// Returns true if the transaction was closed
-fn close_transaction(transaction: &mut Arc<Transaction>, line: u64) -> Result<(), Error> {
-    match Arc::get_mut(transaction) {
-        None => unimplemented!(),
-        Some(transaction) => {
-            let mut sum = 0_i64;
-            for p in transaction.postings.iter_mut() {
-                if let Some(a) = &p.amount {
-                    sum += a.quantity;
-                }
-            }
-
-            if sum == 0 {
-                return Ok(());
-            }
-
-            // If there is no posting with an elided amount, we can't balance the transaction
-            if transaction.elided_amount_posting_index.is_none() {
-                // we step up a line here because by this point we've moved past the transaction in question
-                return Err(Error::TransactionDoesNotBalance(line));
-            }
-
-            let index = transaction.elided_amount_posting_index.unwrap();
-
-            match Arc::get_mut(&mut transaction.postings[index]) {
-                None => return Err(Error::TransactionDoesNotBalance(line)),
-                Some(posting) => posting.amount = Some(Amount::new(-sum, "")),
-            }
-
-            Ok(())
-        }
-    }
-}
-*/
-
+// TODO move all lexing to a new file
 fn take_to_multispace(iter: &mut Peekable<Chars>) -> String {
     iter.scan("", |state, c| {
         if c == '\t' {

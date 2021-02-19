@@ -35,7 +35,8 @@ pub struct Transaction {
     pub payee: String,
     pub status: Status,
     pub header_comment: Option<String>,
-    pub postings: Vec<Arc<Posting>>,
+    // Indexes of the postings vec
+    pub postings: Vec<usize>,
     pub comments: Vec<String>,
     pub elided_amount_posting_index: Option<usize>,
 }
@@ -52,50 +53,6 @@ impl Transaction {
             elided_amount_posting_index: None,
         }
     }
-
-    /// Returns false if the posting already had an elided amount
-    pub fn add_posting(&mut self, posting: Posting) -> bool {
-        if posting.amount.is_none() {
-            if self.elided_amount_posting_index.is_some() {
-                return false;
-            }
-            let index = self.postings.len();
-            self.elided_amount_posting_index = Some(index);
-        }
-
-        self.postings.push(Arc::new(posting));
-
-        true
-    }
-
-    /// Returns true if the transaction was closed or false if the transaction did not balance
-    pub fn close(&mut self) -> bool {
-        let mut sum = 0_i64;
-        for p in self.postings.iter_mut() {
-            if let Some(a) = &p.amount {
-                sum += a.quantity;
-            }
-        }
-
-        if sum == 0 {
-            return true;
-        }
-
-        // If there is no posting with an elided amount, we can't balance the transaction
-        if self.elided_amount_posting_index.is_none() {
-            // we step up a line here because by this point we've moved past the transaction in question
-            return false;
-        }
-
-        let index = self.elided_amount_posting_index.unwrap();
-
-        match Arc::get_mut(&mut self.postings[index]) {
-            None => return false,
-            Some(posting) => posting.amount = Some(Amount::new(-sum, "")),
-        }
-
-        true
-    }
 }
 
 impl std::fmt::Display for Transaction {
@@ -108,6 +65,7 @@ impl std::fmt::Display for Transaction {
             }
         }
 
+        // TODO this won't work anymore
         let mut postings = String::new();
         for p in self.postings.iter() {
             postings.push_str(&p.to_string())

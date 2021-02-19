@@ -8,7 +8,8 @@ pub struct Posting {
     pub path: String,
     pub amount: Option<Amount>,
     pub comments: Vec<String>,
-    pub transaction: Option<Weak<Transaction>>,
+    // Index of the transaction
+    pub transaction: Option<usize>,
 }
 
 impl Posting {
