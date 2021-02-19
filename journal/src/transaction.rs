@@ -1,8 +1,4 @@
-use super::Amount;
-use super::Posting;
-
 use std::cmp::Ordering;
-use std::sync::Arc;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Status {

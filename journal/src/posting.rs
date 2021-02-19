@@ -1,7 +1,4 @@
-use std::sync::Weak;
-
 use super::amount::Amount;
-use super::Transaction;
 
 #[derive(Debug, Default)]
 pub struct Posting {

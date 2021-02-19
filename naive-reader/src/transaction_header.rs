@@ -1,5 +1,4 @@
 use journal::transaction::Status;
-use journal::Transaction;
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct TransactionHeader {

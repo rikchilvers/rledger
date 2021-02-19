@@ -1,4 +1,4 @@
-use super::{error::Error, error::ErrorKind, source::ItemKind, source::ParsedItem, source::Source};
+use super::{error::Error, error::ErrorKind, source::ItemKind, source::Source};
 
 use journal::Posting;
 use journal::Transaction;
@@ -56,6 +56,7 @@ impl Reader {
             }
         }
 
+        // TODO add a flag for this
         &transactions.par_sort_unstable();
 
         return Ok((transactions, postings));

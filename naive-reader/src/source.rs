@@ -98,7 +98,7 @@ impl Source {
         }
     }
 
-    /// Add any postings to the transaction and return it wrapped in an Arc
+    /// Checks that the transaction balances (and handles an elided amount)
     fn close_transaction(&mut self) -> Option<Result<ParsedItem, ErrorKind>> {
         match self.transaction.take() {
             None => return None,
