@@ -11,7 +11,7 @@ use crate::print::Printer;
 use crate::stats::Statistics;
 // use reader::Reade
 
-use reader::reader::Reader;
+use reader::reader::{Config, Reader};
 
 use clap::{App, Arg};
 
@@ -44,9 +44,9 @@ fn main() {
     if let Some(_) = matches.subcommand_matches("print") {
         let file = matches.value_of("file").unwrap().to_owned();
         let mut reader = Reader::new();
-        match reader.read(file) {
+        match reader.read(file, Config::new()) {
             Err(e) => println!("{}", e),
-            Ok((transactions, _)) => {
+            Ok((transactions, postings)) => {
                 for transaction in transactions {
                     println!("{}", transaction)
                 }
