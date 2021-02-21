@@ -1,3 +1,6 @@
+use std::path::PathBuf;
+use std::sync::Arc;
+
 /// Type of line found in a journal file
 pub enum LineType {
     Unknown,
@@ -21,40 +24,55 @@ impl std::fmt::Display for LineType {
     }
 }
 
+/// Packages an ErrorKind with location information
+pub struct Error {
+    pub location: Arc<PathBuf>,
+    pub line: u64,
+    pub kind: ErrorKind,
+}
+
 /// Indicates an error during reading of a journal file
-pub enum Error {
-    UnexpectedItem(LineType, u64),
-    MissingPosting(u64),
-    MissingTransaction(u64),
-    TwoPostingsWithElidedAmounts(u64),
-    TransactionDoesNotBalance(u64),
-    IO(std::io::Error, u64),
-    Parse(LineType, u64),
+pub enum ErrorKind {
+    IncorrectFormatting(String),
+    DuplicateSource(Arc<PathBuf>),
+    UnexpectedItem(LineType),
+    MissingPosting,
+    MissingTransaction,
+    TwoPostingsWithElidedAmounts,
+    TransactionDoesNotBalance,
+    IO(std::io::Error),
+    Parse(LineType),
 }
 
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Error::UnexpectedItem(item, line) => {
-                write!(f, "Unexpected {} on line {}", item, line)
+        match &self.kind {
+            ErrorKind::UnexpectedItem(item) => {
+                write!(f, "Unexpected {} on line {}", item, self.line)
             }
-            Error::MissingPosting(line) => {
-                write!(f, "Missing posting on line {}", line)
+            ErrorKind::MissingPosting => {
+                write!(f, "Missing posting on line {}", self.line)
             }
-            Error::MissingTransaction(line) => {
-                write!(f, "Missing transaction on line {}", line)
+            ErrorKind::MissingTransaction => {
+                write!(f, "Missing transaction on line {}", self.line)
             }
-            Error::TwoPostingsWithElidedAmounts(line) => {
-                write!(f, "Two postings with elided amounts on line {}", line)
+            ErrorKind::TwoPostingsWithElidedAmounts => {
+                write!(f, "Two postings with elided amounts on line {}", self.line)
             }
-            Error::TransactionDoesNotBalance(line) => {
-                write!(f, "Transaction ending on line {} does not balance.", line)
+            ErrorKind::TransactionDoesNotBalance => {
+                write!(f, "Transaction ending on line {} does not balance.", self.line)
             }
-            Error::IO(e, line) => {
-                write!(f, "An IO error occurred on line {}: {:?}", line, e)
+            ErrorKind::IO(e) => {
+                write!(f, "An IO error occurred on line {}: {:?}", self.line, e)
             }
-            Error::Parse(item, line) => {
-                write!(f, "Failed to parse {} on line {}", item, line)
+            ErrorKind::Parse(item) => {
+                write!(f, "Failed to parse {} at {:?}:{}", item, self.location, self.line)
+            }
+            ErrorKind::DuplicateSource(path) => {
+                write!(f, "Found cyclic import of {:?}", path.as_path())
+            }
+            ErrorKind::IncorrectFormatting(desc) => {
+                write!(f, "Incorrect formatting on line {}: {}", self.line, desc)
             }
         }
     }

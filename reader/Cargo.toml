@@ -6,13 +6,8 @@ edition = "2018"
 
 [dependencies]
 journal = { path = "../journal" }
-nom = "6.0"
 time = "0.2"
 rayon = "1.5"
 
 [dev-dependencies]
 criterion = "0.3"
-
-[[bench]]
-name = "parser_verification"
-harness = false
