@@ -382,6 +382,8 @@ fn take_to_multispace(iter: &mut Peekable<Chars>) -> String {
                 return None;
             }
             *state = " ";
+        } else {
+            *state = "";
         }
 
         Some(c)
