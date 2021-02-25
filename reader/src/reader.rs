@@ -13,9 +13,9 @@ const TRANSACTION_COUNT: usize = 1024;
 const POSTING_COUNT: usize = TRANSACTION_COUNT * 2;
 
 pub struct Config {
-    should_sort: bool,
-    read_postings: bool,
-    read_transactions: bool,
+    pub should_sort: bool,
+    pub read_postings: bool,
+    pub read_transactions: bool,
 }
 
 impl Config {
