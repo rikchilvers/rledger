@@ -370,7 +370,6 @@ impl Source {
     }
 }
 
-// TODO move all lexing to a new file
 fn take_to_multispace(iter: &mut Peekable<Chars>) -> String {
     iter.scan("", |state, c| {
         if c == '\t' {
