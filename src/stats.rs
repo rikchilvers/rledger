@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use journal::Transaction;
 use reader::error::Error;
 use reader::Date;
@@ -9,6 +11,7 @@ pub struct Statistics {
     end_date: Date,
     transaction_count: usize,
     posting_count: usize,
+    unique_postings: HashSet<String>,
 }
 
 impl Statistics {
@@ -18,6 +21,7 @@ impl Statistics {
             end_date: Date::try_from_ymd(-100000, 1, 1).unwrap(),
             transaction_count: 0,
             posting_count: 0,
+            unique_postings: HashSet::new(),
         }
     }
 
@@ -33,6 +37,7 @@ impl Statistics {
 
         for p in postings {
             self.posting_count += 1;
+            self.unique_postings.insert(p.path);
         }
 
         self.report();
@@ -58,5 +63,6 @@ impl Statistics {
         println!("Time period:\t\tXXXX days");
         println!("Transactions:\t\t{} (X.X per day)", self.transaction_count);
         println!("Postings:\t\t{}", self.posting_count);
+        println!("Unique accounts:\t{}", self.unique_postings.len());
     }
 }
