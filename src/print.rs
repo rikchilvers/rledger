@@ -1,38 +1,26 @@
-use crate::command::Command;
-
 use journal::Transaction;
 use reader::error::Error;
 
-use std::sync::Arc;
+use reader::reader::{Config, Reader};
 
-pub struct Printer {
-    transactions: Vec<Arc<Transaction>>,
-}
+pub struct Printer {}
 
 impl Printer {
     pub fn new() -> Self {
-        Self { transactions: vec![] }
+        Self {}
     }
-}
 
-impl Command for Printer {
-    fn read_transactions<I>(&mut self, reader: I) -> Result<(), Error>
-    where
-        I: IntoIterator<Item = Result<Arc<Transaction>, Error>>,
-    {
-        for item in reader {
-            match item {
-                Err(e) => return Err(e),
-                Ok(transaction) => self.transactions.push(transaction),
-            }
+    pub fn read(&mut self, file: String) -> Result<(), Error> {
+        let mut reader = Reader::new();
+        let mut config = Config::new();
+        config.should_sort = true;
+
+        let (transactions, postings) = reader.read(file, config)?;
+
+        for transaction in transactions {
+            transaction.display(&postings);
         }
 
         Ok(())
-    }
-
-    fn report(&self) {
-        for transaction in self.transactions.iter() {
-            println!("{}", transaction);
-        }
     }
 }
