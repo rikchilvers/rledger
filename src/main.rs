@@ -52,14 +52,12 @@ fn main() {
     }
 
     if let Some(_) = matches.subcommand_matches("statistics") {
-        // let reader = Reader::new(matches.value_of("file").unwrap());
-        // let mut stats = Statistics::new();
+        let file = matches.value_of("file").unwrap().to_owned();
 
-        // if let Err(e) = stats.read_transactions(reader) {
-        //     println!("{}", e);
-        //     return;
-        // }
+        let mut stats = Statistics::new();
 
-        // stats.report();
+        if let Err(e) = stats.read(file) {
+            println!("{}", e);
+        }
     }
 }
