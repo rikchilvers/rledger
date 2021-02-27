@@ -57,11 +57,24 @@ impl Reader {
             match t {
                 Err(e) => return Err(e),
                 Ok(r) => match r.kind {
-                    ItemKind::Transaction(t, mut p) => {
+                    ItemKind::Transaction(mut t, mut p) => {
+                        // Link the postings and txs by idx
+                        let t_index = transactions.len();
+                        let p_indices = (postings.len()..postings.len() + p.len()).collect();
+
                         if config.read_transactions {
+                            if config.read_postings {
+                                t.postings = p_indices;
+                            }
                             transactions.push(t);
                         }
+
                         if config.read_postings {
+                            if config.read_transactions && !config.should_sort {
+                                for p in &mut p {
+                                    p.transaction = Some(t_index);
+                                }
+                            }
                             postings.append(&mut p);
                         }
                     }
@@ -83,6 +96,11 @@ impl Reader {
 
         if config.should_sort {
             &transactions.par_sort_unstable();
+            for (t_idx, t) in transactions.iter().enumerate() {
+                for p_idx in t.postings.iter() {
+                    postings[*p_idx].transaction = Some(t_idx)
+                }
+            }
         }
 
         return Ok((transactions, postings));
