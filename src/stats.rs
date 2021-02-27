@@ -23,7 +23,7 @@ impl Statistics {
 
     pub fn read(&mut self, file: String) -> Result<(), Error> {
         let mut reader = Reader::new();
-        let mut config = Config::new();
+        let config = Config::new();
 
         let (transactions, postings) = reader.read(file, config)?;
 
