@@ -1,5 +1,7 @@
 use std::cmp::Ordering;
 
+use super::Posting;
+
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Status {
     // TODO: change to None
@@ -31,7 +33,7 @@ pub struct Transaction {
     pub payee: String,
     pub status: Status,
     pub header_comment: Option<String>,
-    // Indexes of the postings vec
+    /// Indexes of the postings vec
     pub postings: Vec<usize>,
     pub comments: Vec<String>,
     pub elided_amount_posting_index: Option<usize>,
@@ -49,10 +51,8 @@ impl Transaction {
             elided_amount_posting_index: None,
         }
     }
-}
 
-impl std::fmt::Display for Transaction {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    pub fn display(&self, postings: &[Posting]) {
         let mut comments: Option<String> = None;
         for comment in self.comments.iter() {
             match comments {
@@ -61,20 +61,21 @@ impl std::fmt::Display for Transaction {
             }
         }
 
-        // TODO this won't work anymore
-        let mut postings = String::new();
-        for p in self.postings.iter() {
-            postings.push_str(&p.to_string())
+        let mut posting_output = String::new();
+        for p_idx in self.postings.iter() {
+            posting_output.push_str(&postings[*p_idx].to_string())
         }
 
-        if let Some(comments) = comments {
-            write!(
-                f,
-                "{} {} {}\n{}\n{}",
-                self.date, self.status, self.payee, comments, postings
-            )
-        } else {
-            write!(f, "{} {} {}\n{}", self.date, self.status, self.payee, postings)
+        match comments {
+            Some(c) => {
+                println!(
+                    "{} {} {}\n{}\n{}",
+                    self.date, self.status, self.payee, c, posting_output,
+                )
+            }
+            None => {
+                println!("{} {} {}\n{}", self.date, self.status, self.payee, posting_output,)
+            }
         }
     }
 }
