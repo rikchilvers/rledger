@@ -43,36 +43,13 @@ fn main() {
 
     if let Some(_) = matches.subcommand_matches("print") {
         let file = matches.value_of("file").unwrap().to_owned();
-        let mut reader = Reader::new();
-        match reader.read(file, Config::new()) {
-            Err(e) => println!("{}", e),
-            Ok((transactions, postings)) => {
-                for transaction in transactions {
-                    println!("{}", transaction)
-                }
-            }
+
+        let mut printer = Printer::new();
+
+        if let Err(e) = printer.read(file) {
+            println!("{}", e);
         }
     }
-
-    /*
-    if let Some(_) = matches.subcommand_matches("print") {
-        let file = matches.value_of("file").unwrap().to_owned();
-        let mut reader = Reader::new();
-        // let mut printer = Printer::new();
-
-        let transactions = reader.read(file);
-        for t in transactions {
-            println!("{}", t)
-        }
-
-        // if let Err(e) = printer.read_transactions(reader) {
-        //     println!("{}", e);
-        //     return;
-        // }
-
-        // printer.report();
-    }
-    */
 
     if let Some(_) = matches.subcommand_matches("statistics") {
         // let reader = Reader::new(matches.value_of("file").unwrap());
