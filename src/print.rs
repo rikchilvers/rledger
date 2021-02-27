@@ -1,4 +1,3 @@
-use journal::Transaction;
 use reader::error::Error;
 
 use reader::reader::{Config, Reader};
