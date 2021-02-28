@@ -32,7 +32,7 @@ impl Statistics {
         let (transactions, postings) = reader.read(file, config)?;
 
         for t in transactions {
-            self.process_transaction(t);
+            self.process_transaction(&t);
         }
 
         for p in postings {
@@ -45,7 +45,7 @@ impl Statistics {
         Ok(())
     }
 
-    fn process_transaction(&mut self, transaction: Transaction) {
+    fn process_transaction(&mut self, transaction: &Transaction) {
         self.transaction_count += 1;
 
         if transaction.date.lt(&self.start_date) {
