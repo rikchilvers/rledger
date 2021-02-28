@@ -28,23 +28,25 @@ impl Config {
     }
 }
 
-pub struct Reader {
-    visited_sources: HashSet<Arc<PathBuf>>,
-}
+// TODO does this need to be a struct?
+pub struct Reader {}
 
 impl Reader {
     pub fn new() -> Self {
-        Self {
-            visited_sources: HashSet::new(),
-        }
+        Self {}
     }
 
     // TODO: make this take things that are into<pathbuf>
-    pub fn read(&mut self, location: String, config: Config) -> Result<(Vec<Transaction>, Vec<Posting>), Error> {
+    pub fn read(
+        &mut self,
+        location: String,
+        config: Config,
+    ) -> Result<(Vec<Transaction>, Vec<Posting>, HashSet<Arc<PathBuf>>), Error> {
         let (send, recv) = mpsc::channel();
 
+        let source_location = location.clone();
         thread::spawn(move || {
-            let mut source = Source::new(&location);
+            let mut source = Source::new(&source_location);
             source.parse(send);
         });
 
@@ -52,6 +54,8 @@ impl Reader {
         // about errors occuring mid-stream.
         let mut transactions = Vec::with_capacity(if config.read_transactions { TRANSACTION_COUNT } else { 0 });
         let mut postings = Vec::with_capacity(if config.read_postings { POSTING_COUNT } else { 0 });
+        let mut visited_sources = HashSet::new(); // HashSet<Arc<PathBuf>>,
+        visited_sources.insert(Arc::new(PathBuf::from(location)));
 
         for t in recv {
             match t {
@@ -80,7 +84,7 @@ impl Reader {
                     }
                     ItemKind::IncludeDirective(include) => {
                         let to_insert = Arc::clone(&include);
-                        if !self.visited_sources.insert(to_insert) {
+                        if !visited_sources.insert(to_insert) {
                             let error = Error {
                                 kind: ErrorKind::DuplicateSource(include),
                                 line: 0,
@@ -103,6 +107,6 @@ impl Reader {
             }
         }
 
-        return Ok((transactions, postings));
+        return Ok((transactions, postings, visited_sources));
     }
 }
