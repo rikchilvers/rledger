@@ -67,6 +67,8 @@ impl Statistics {
     }
 
     fn report(&self) {
+        let duration = (self.end_date - self.start_date).as_seconds_f64() / 60. / 60. / 24.;
+
         println!("Transactions found in {} files", self.sources.len());
         let mut sources: Vec<&Arc<PathBuf>> = self.sources.iter().collect();
         sources.sort();
@@ -75,7 +77,7 @@ impl Statistics {
         }
         println!("First transaction:\t{} (X time ago)", self.start_date);
         println!("Last transaction:\t{} (X time ago)", self.end_date);
-        println!("Time period:\t\tXXXX days");
+        println!("Time period:\t\t{:.0} days", duration);
         println!("Transactions:\t\t{} (X.X per day)", self.transaction_count);
         println!("Postings:\t\t{}", self.posting_count);
         println!("Unique accounts:\t{}", self.unique_accounts.len());
