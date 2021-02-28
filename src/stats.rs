@@ -1,4 +1,6 @@
 use std::collections::HashSet;
+use std::path::PathBuf;
+use std::sync::Arc;
 
 use journal::Transaction;
 use reader::error::Error;
@@ -9,6 +11,7 @@ use reader::reader::{Config, Reader};
 pub struct Statistics {
     start_date: Date,
     end_date: Date,
+    sources: HashSet<Arc<PathBuf>>,
     transaction_count: usize,
     posting_count: usize,
     unique_accounts: HashSet<String>,
@@ -20,6 +23,7 @@ impl Statistics {
         Self {
             start_date: Date::try_from_ymd(100000, 1, 1).unwrap(),
             end_date: Date::try_from_ymd(-100000, 1, 1).unwrap(),
+            sources: HashSet::new(),
             transaction_count: 0,
             posting_count: 0,
             unique_accounts: HashSet::new(),
@@ -31,7 +35,9 @@ impl Statistics {
         let mut reader = Reader::new();
         let config = Config::new();
 
-        let (transactions, postings) = reader.read(file, config)?;
+        let (transactions, postings, sources) = reader.read(file, config)?;
+
+        self.sources = sources;
 
         for t in transactions {
             self.process_transaction(&t);
@@ -61,6 +67,10 @@ impl Statistics {
     }
 
     fn report(&self) {
+        println!("Transactions found in {} files", self.sources.len());
+        for s in &self.sources {
+            println!("  {:?}", s)
+        }
         println!("First transaction:\t{} (X time ago)", self.start_date);
         println!("Last transaction:\t{} (X time ago)", self.end_date);
         println!("Time period:\t\tXXXX days");
