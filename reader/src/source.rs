@@ -293,7 +293,7 @@ impl Source {
             _ => transaction.status = Status::NoStatus,
         }
 
-        transaction.payee = take_to_comment_or_end(iter);
+        transaction.payee = take_to_comment_or_end(iter).trim_end().to_owned();
         transaction.header_comment = self.parse_comment(iter);
 
         return Ok(transaction);
@@ -395,6 +395,8 @@ fn take_to_space(iter: &mut Peekable<Chars>) -> String {
 }
 
 fn take_to_comment_or_end(iter: &mut Peekable<Chars>) -> String {
+    // TODO this implementation means that we have to trim space from the end of payees (+1
+    // allocation) - is there a better way?
     iter.take_while(|c| !is_comment_indicator(c)).collect()
 }
 
