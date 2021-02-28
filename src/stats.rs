@@ -68,7 +68,9 @@ impl Statistics {
 
     fn report(&self) {
         println!("Transactions found in {} files", self.sources.len());
-        for s in &self.sources {
+        let mut sources: Vec<&Arc<PathBuf>> = self.sources.iter().collect();
+        sources.sort();
+        for s in sources {
             println!("  {:?}", s)
         }
         println!("First transaction:\t{} (X time ago)", self.start_date);
