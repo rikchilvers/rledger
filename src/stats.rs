@@ -11,7 +11,8 @@ pub struct Statistics {
     end_date: Date,
     transaction_count: usize,
     posting_count: usize,
-    unique_postings: HashSet<String>,
+    unique_accounts: HashSet<String>,
+    unique_payees: HashSet<String>,
 }
 
 impl Statistics {
@@ -21,7 +22,8 @@ impl Statistics {
             end_date: Date::try_from_ymd(-100000, 1, 1).unwrap(),
             transaction_count: 0,
             posting_count: 0,
-            unique_postings: HashSet::new(),
+            unique_accounts: HashSet::new(),
+            unique_payees: HashSet::new(),
         }
     }
 
@@ -33,11 +35,12 @@ impl Statistics {
 
         for t in transactions {
             self.process_transaction(&t);
+            self.unique_payees.insert(t.payee);
         }
 
         for p in postings {
             self.posting_count += 1;
-            self.unique_postings.insert(p.path);
+            self.unique_accounts.insert(p.path);
         }
 
         self.report();
@@ -63,6 +66,7 @@ impl Statistics {
         println!("Time period:\t\tXXXX days");
         println!("Transactions:\t\t{} (X.X per day)", self.transaction_count);
         println!("Postings:\t\t{}", self.posting_count);
-        println!("Unique accounts:\t{}", self.unique_postings.len());
+        println!("Unique accounts:\t{}", self.unique_accounts.len());
+        println!("Unique payees:\t\t{}", self.unique_payees.len());
     }
 }
