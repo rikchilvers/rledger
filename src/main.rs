@@ -6,12 +6,8 @@ mod command;
 mod print;
 mod stats;
 
-use crate::command::Command;
 use crate::print::Printer;
 use crate::stats::Statistics;
-// use reader::Reade
-
-use reader::reader::{Config, Reader};
 
 use clap::{App, Arg};
 
