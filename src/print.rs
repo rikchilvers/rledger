@@ -14,7 +14,7 @@ impl Printer {
         let mut config = Config::new();
         config.should_sort = true;
 
-        let (transactions, postings) = reader.read(file, config)?;
+        let (transactions, postings, _) = reader.read(file, config)?;
 
         for transaction in transactions {
             transaction.display(&postings);
