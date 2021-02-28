@@ -76,8 +76,8 @@ impl Statistics {
         for s in sources {
             println!("  {:?}", s)
         }
-        println!("First transaction:\t{} (X time ago)", self.start_date);
-        println!("Last transaction:\t{} (X time ago)", self.end_date);
+        println!("First transaction:\t{}", self.start_date);
+        println!("Last transaction:\t{}", self.end_date);
         println!("Time period:\t\t{:.0} days", days);
         println!(
             "Transactions:\t\t{} ({:.1} per day)",
