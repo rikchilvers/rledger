@@ -454,6 +454,7 @@ dependencies = [
  "clap",
  "journal",
  "reader",
+ "tree",
 ]
 
 [[package]]
@@ -676,6 +677,10 @@ dependencies = [
  "serde",
  "serde_json",
 ]
+
+[[package]]
+name = "tree"
+version = "0.1.0"
 
 [[package]]
 name = "unicode-width"

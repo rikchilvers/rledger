@@ -1,0 +1,5 @@
+[package]
+name = "tree"
+version = "0.1.0"
+authors = ["Rik Chilvers <rikchilvers@fastmail.com>"]
+edition = "2018"
