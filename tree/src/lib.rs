@@ -90,6 +90,7 @@ where
         }
     }
 
+    /// Applies `F` to root and all ancestors
     pub fn walk_ancestors<F>(&mut self, root: usize, mut f: F)
     where
         F: FnMut(&mut Node<'a, V>),
@@ -310,18 +311,46 @@ mod tests {
         }
     }
 
-    /*
     #[test]
     fn it_walks_ancestors() {
         let mut tree: Tree<'_, usize> = Tree::new();
         let mut path = vec!["a", "b", "c"];
         let c_index = tree.add_path(&mut path);
 
+        match tree.get_node_at_path(&mut ["a", "b", "c"]) {
+            None => panic!("failed to get node at path"),
+            Some(node) => assert_eq!(node.value, 0),
+        }
+
+        match tree.get_node_at_path(&mut ["a", "b"]) {
+            None => panic!("failed to get node at path"),
+            Some(node) => assert_eq!(node.value, 0),
+        }
+
+        match tree.get_node_at_path(&mut ["a"]) {
+            None => panic!("failed to get node at path"),
+            Some(node) => assert_eq!(node.value, 0),
+        }
+
         tree.walk_ancestors(c_index, |node| node.value += 1);
 
-        let a = tree.get_node_at_path(&mut ["a"]).unwrap();
+        match tree.get_node_at_path(&mut ["a"]) {
+            None => panic!("failed to get node at path"),
+            Some(node) => assert_eq!(node.value, 1),
+        }
+
+        match tree.get_node_at_path(&mut ["a", "b"]) {
+            None => panic!("failed to get node at path"),
+            Some(node) => assert_eq!(node.value, 1),
+        }
+
+        match tree.get_node_at_path(&mut ["a", "b", "c"]) {
+            None => panic!("failed to get node at path"),
+            Some(node) => assert_eq!(node.value, 1),
+        }
     }
 
+    /*
     #[test]
     fn it_walks_descendants() {
         let mut tree: Tree<'_, usize> = Tree::new();
