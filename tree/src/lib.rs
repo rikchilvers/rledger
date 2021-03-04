@@ -110,6 +110,18 @@ where
         }
     }
 
+    pub fn walk_descendants<F>(&mut self, root: usize, mut f: F)
+    where
+        F: FnMut(&mut Node<'a, V>) + Copy,
+    {
+        if let Some(indices) = self.child_indices(root) {
+            for index in indices {
+                let node = self.arena[index].as_mut().unwrap();
+                f(node);
+            }
+        }
+    }
+
     fn child_indices(&self, root: usize) -> Option<Vec<usize>> {
         match self.arena.get(root) {
             None => return None,
@@ -130,18 +142,6 @@ where
                     return Some(indices);
                 }
             },
-        }
-    }
-
-    pub fn walk_descendants<F>(&mut self, root: usize, mut f: F)
-    where
-        F: FnMut(&mut Node<'a, V>) + Copy,
-    {
-        if let Some(indices) = self.child_indices(root) {
-            for index in indices {
-                let node = self.arena[index].as_mut().unwrap();
-                f(node);
-            }
         }
     }
 
@@ -255,11 +255,28 @@ mod tests {
     use super::*;
 
     #[test]
-    fn it_adds_nodes() {
+    fn it_adds_paths() {
         let mut tree: Tree<'_, usize> = Tree::new();
         let mut path = vec!["a", "b", "c"];
         let c_index = tree.add_path(&mut path);
         assert_eq!(3, c_index);
+    }
+
+    #[test]
+    fn it_adds_values() {
+        let mut tree: Tree<'_, usize> = Tree::new();
+        let mut path = vec!["a", "b", "c"];
+        tree.add_value_at_path(&mut path, 42);
+
+        match tree.get_node_at_path(&mut ["a", "b"]) {
+            None => panic!("failed to get node at path"),
+            Some(node) => assert_eq!(node.value, 0),
+        }
+
+        match tree.get_node_at_path(&mut ["a", "b", "c"]) {
+            None => panic!("failed to get node at path"),
+            Some(node) => assert_eq!(node.value, 42),
+        }
     }
 
     #[test]
