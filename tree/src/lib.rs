@@ -120,28 +120,38 @@ where
         }
     }
 
-    fn child_indices(&self, root: usize) -> Vec<usize> {
-        let node = self.arena[root].as_ref().unwrap();
+    fn child_indices(&self, root: usize) -> Option<Vec<usize>> {
+        match self.arena.get(root) {
+            None => return None,
+            Some(node) => match node {
+                None => return None,
+                Some(node) => {
+                    if node.children.len() == 0 {
+                        return None;
+                    }
 
-        if node.children.len() == 0 {
-            return vec![];
+                    let indices = node.children.values().fold(vec![], |mut acc, index| {
+                        if let Some(ref mut v) = self.child_indices(*index) {
+                            acc.append(v);
+                        }
+                        acc
+                    });
+
+                    return Some(indices);
+                }
+            },
         }
-
-        let indices: Vec<usize> = node.children.values().fold(vec![], |mut acc, index| {
-            acc.append(&mut self.child_indices(*index));
-            acc
-        });
-
-        return indices;
     }
 
     pub fn walk_descendants<F>(&mut self, root: usize, mut f: F)
     where
         F: FnMut(&mut Node<'a, V>) + Copy,
     {
-        for index in self.child_indices(root) {
-            let node = self.arena[index].as_mut().unwrap();
-            f(node);
+        if let Some(indices) = self.child_indices(root) {
+            for index in indices {
+                let node = self.arena[index].as_mut().unwrap();
+                f(node);
+            }
         }
     }
 
