@@ -120,38 +120,29 @@ where
         }
     }
 
+    fn child_indices(&self, root: usize) -> Vec<usize> {
+        let node = self.arena[root].as_ref().unwrap();
+
+        if node.children.len() == 0 {
+            return vec![];
+        }
+
+        let indices: Vec<usize> = node.children.values().fold(vec![], |mut acc, index| {
+            acc.append(&mut self.child_indices(*index));
+            acc
+        });
+
+        return indices;
+    }
+
     pub fn walk_descendants<F>(&mut self, root: usize, mut f: F)
     where
         F: FnMut(&mut Node<'a, V>) + Copy,
     {
-        // TODO I think we need to use the visitor pattern
-        // https://sachanganesh.com/programming/graph-tree-traversals-in-rust/
-        unimplemented!();
-        /*
-        match self.arena.get_mut(root) {
-            None => return,
-            Some(node) => match node {
-                None => return,
-                Some(node) => {
-                    for index in node.children.values() {
-                        self.walk_descendants(*index, f);
-                        println!("hello");
-                    }
-                    f(node);
-                }
-            },
+        for index in self.child_indices(root) {
+            let node = self.arena[index].as_mut().unwrap();
+            f(node);
         }
-        match self.arena[root].as_mut() {
-            None => return,
-            Some(node) => {
-                f(node);
-
-                for child_index in node.children.values() {
-                    self.walk_descendants(*child_index, f);
-                }
-            }
-        }
-        */
     }
 
     pub fn display<F>(&self, root: &Option<usize>, f: F)
