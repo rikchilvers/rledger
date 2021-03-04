@@ -74,12 +74,22 @@ where
         node.value = value;
     }
 
-    pub fn index_of_node_at_path(&self, path: &mut [&'a str]) -> Option<usize> {
+    pub fn index_of_node_at_path(&self, path: &mut [&'a str]) -> Option<&usize> {
         match path.split_last_mut() {
-            None => return Some(self.root),
-            Some((_, rest)) => match self.index_of_node_at_path(rest) {
+            // If we can't split the path anymore, we've got to the root
+            None => return Some(&self.root),
+
+            Some((component, rest)) => match self.index_of_node_at_path(rest) {
                 None => return None,
-                Some(index) => return Some(index),
+
+                Some(index) => match self.arena.get(*index) {
+                    None => return None,
+
+                    Some(node) => match node {
+                        None => return None,
+                        Some(node) => return node.children.get(component),
+                    },
+                },
             },
         }
     }
@@ -88,16 +98,17 @@ where
     pub fn get_node_at_path(&mut self, path: &mut [&'a str]) -> Option<&Node<'a, V>> {
         match self.index_of_node_at_path(path) {
             None => return None,
-            Some(index) => return self.arena[index].as_ref(),
+            Some(index) => return self.arena[*index].as_ref(),
         }
     }
 
     /// If the path did not exist, return None
     pub fn get_node_at_path_mut(&mut self, path: &mut [&'a str]) -> Option<&mut Node<'a, V>> {
-        match self.index_of_node_at_path(path) {
-            None => return None,
-            Some(index) => return self.arena[index].as_mut(),
-        }
+        unimplemented!();
+        // match self.index_of_node_at_path(path) {
+        //     None => return None,
+        //     Some(index) => return self.arena[*index].as_mut(),
+        // }
     }
 
     pub fn walk_ancestors<F>(&mut self, root: usize, mut f: F)
@@ -244,6 +255,51 @@ where
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn it_adds_nodes() {
+        let mut tree: Tree<'_, usize> = Tree::new();
+        let mut path = vec!["a", "b", "c"];
+        let c_index = tree.add_path(&mut path);
+        assert_eq!(3, c_index);
+    }
+
+    #[test]
+    fn it_finds_the_index_of_a_path() {
+        let mut tree: Tree<'_, usize> = Tree::new();
+        let mut path = vec!["a", "b", "c"];
+        tree.add_path(&mut path);
+
+        assert_eq!(tree.index_of_node_at_path(&mut ["a"]), Some(&1));
+        assert_eq!(tree.index_of_node_at_path(&mut ["a", "b"]), Some(&2));
+        assert_eq!(tree.index_of_node_at_path(&mut ["a", "b", "c"]), Some(&3));
+    }
+
+    /*
+    #[test]
+    fn it_walks_ancestors() {
+        let mut tree: Tree<'_, usize> = Tree::new();
+        let mut path = vec!["a", "b", "c"];
+        let c_index = tree.add_path(&mut path);
+
+        tree.walk_ancestors(c_index, |node| node.value += 1);
+
+        let a = tree.get_node_at_path(&mut ["a"]).unwrap();
+    }
+
+    #[test]
+    fn it_walks_descendants() {
+        let mut tree: Tree<'_, usize> = Tree::new();
+        let mut path = vec!["a", "b", "c"];
+        let c_index = tree.add_path(&mut path);
+        assert_eq!(3, c_index);
+    }
+    */
+}
+
 /*
 fn main() {
     let mut tree: Tree<'_, usize> = Tree::new();
@@ -286,19 +342,3 @@ fn main() {
     tree.walk_ancestors(d_prime_idx, |_| {});
 }
 */
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn it_works() {
-        let mut root = TreeNode::new(0);
-
-        let mut path = vec!["a", "b", "c"];
-        path.reverse();
-
-        let three = root.find_or_create_node(Some(3), path);
-        assert_eq!(three.value, 3);
-    }
-}
