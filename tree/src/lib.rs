@@ -74,41 +74,20 @@ where
         node.value = value;
     }
 
-    pub fn index_of_node_at_path(&self, path: &mut [&'a str]) -> Option<&usize> {
-        match path.split_last_mut() {
-            // If we can't split the path anymore, we've got to the root
-            None => return Some(&self.root),
-
-            Some((component, rest)) => match self.index_of_node_at_path(rest) {
-                None => return None,
-
-                Some(index) => match self.arena.get(*index) {
-                    None => return None,
-
-                    Some(node) => match node {
-                        None => return None,
-                        Some(node) => return node.children.get(component),
-                    },
-                },
-            },
-        }
-    }
-
     /// If the path did not exist, return None
     pub fn get_node_at_path(&mut self, path: &mut [&'a str]) -> Option<&Node<'a, V>> {
-        match self.index_of_node_at_path(path) {
+        match index_of_node_at_path(&self.arena, path, self.root) {
             None => return None,
-            Some(index) => return self.arena[*index].as_ref(),
+            Some(index) => return self.arena[index].as_ref(),
         }
     }
 
     /// If the path did not exist, return None
     pub fn get_node_at_path_mut(&mut self, path: &mut [&'a str]) -> Option<&mut Node<'a, V>> {
-        unimplemented!();
-        // match self.index_of_node_at_path(path) {
-        //     None => return None,
-        //     Some(index) => return self.arena[*index].as_mut(),
-        // }
+        match index_of_node_at_path(&self.arena, path, self.root) {
+            None => None,
+            Some(index) => self.arena[index].as_mut(),
+        }
     }
 
     pub fn walk_ancestors<F>(&mut self, root: usize, mut f: F)
@@ -190,13 +169,29 @@ where
             child.display(indent, &self.arena, f);
         }
     }
+}
 
-    pub fn remove_node_at_path(&mut self, path: Vec<&'a str>) -> bool {
-        unimplemented!();
-    }
+// We need this to be a free function so we don't have multiple borrows of the tree
+fn index_of_node_at_path<'a, V>(arena: &Vec<Option<Node<'a, V>>>, path: &mut [&'a str], root: usize) -> Option<usize>
+where
+    V: Default,
+{
+    match path.split_last_mut() {
+        // If we can't split the path anymore, we've got to the root
+        None => return Some(root),
 
-    pub fn remove_path(&mut self, path: Vec<&'a str>) -> bool {
-        unimplemented!();
+        Some((component, rest)) => match index_of_node_at_path(arena, rest, root) {
+            None => return None,
+
+            Some(index) => match arena.get(index) {
+                None => return None,
+
+                Some(node) => match node {
+                    None => return None,
+                    Some(node) => return node.children.get(component).map(|i| *i),
+                },
+            },
+        },
     }
 }
 
@@ -273,9 +268,29 @@ mod tests {
         let mut path = vec!["a", "b", "c"];
         tree.add_path(&mut path);
 
-        assert_eq!(tree.index_of_node_at_path(&mut ["a"]), Some(&1));
-        assert_eq!(tree.index_of_node_at_path(&mut ["a", "b"]), Some(&2));
-        assert_eq!(tree.index_of_node_at_path(&mut ["a", "b", "c"]), Some(&3));
+        assert_eq!(index_of_node_at_path(&tree.arena, &mut ["a"], tree.root), Some(1));
+        assert_eq!(index_of_node_at_path(&tree.arena, &mut ["a", "b"], tree.root), Some(2));
+        assert_eq!(
+            index_of_node_at_path(&tree.arena, &mut ["a", "b", "c"], tree.root),
+            Some(3)
+        );
+    }
+
+    #[test]
+    fn it_gets_a_node_at_a_path() {
+        let mut tree: Tree<'_, usize> = Tree::new();
+        let mut path = vec!["a", "b", "c"];
+        tree.add_path(&mut path);
+
+        match tree.get_node_at_path_mut(&mut ["a", "b"]) {
+            None => panic!("failed to get node at path"),
+            Some(node) => node.value = 42,
+        }
+
+        match tree.get_node_at_path(&mut ["a", "b"]) {
+            None => panic!("failed to get node at path"),
+            Some(node) => assert_eq!(node.value, 42),
+        }
     }
 
     /*
