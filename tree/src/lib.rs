@@ -111,6 +111,7 @@ where
         }
     }
 
+    /// Applies `F` to all descendants of root
     pub fn walk_descendants<F>(&mut self, root: usize, mut f: F)
     where
         F: FnMut(&mut Node<'a, V>) + Copy,
@@ -133,14 +134,17 @@ where
                         return None;
                     }
 
-                    let indices = node.children.values().fold(vec![], |mut acc, index| {
+                    Some(node.children.values().fold(vec![], |mut acc, index| {
+                        // Add the index of the child
+                        acc.push(*index);
+
+                        // Add the indicies of the grandchildren
                         if let Some(ref mut v) = self.child_indices(*index) {
                             acc.append(v);
                         }
-                        acc
-                    });
 
-                    return Some(indices);
+                        acc
+                    }))
                 }
             },
         }
@@ -217,14 +221,6 @@ where
         }
     }
 
-    pub fn get_parent(&self) -> &Option<usize> {
-        &self.parent
-    }
-
-    pub fn get_children(&self) -> impl std::iter::Iterator<Item = (&&str, &usize)> {
-        self.children.iter()
-    }
-
     fn display<F>(&self, mut indent: usize, arena: &Vec<Option<Self>>, f: F)
     where
         F: Fn(&Self) -> Option<String> + Copy,
@@ -241,13 +237,6 @@ where
 
             child.display(indent, arena, f);
         }
-    }
-
-    fn walk_descendants<F>(&self, arena: &Vec<Option<Self>>, f: F)
-    where
-        F: FnMut(&mut Self) + Copy,
-    {
-        unimplemented!()
     }
 }
 
@@ -350,56 +339,42 @@ mod tests {
         }
     }
 
-    /*
     #[test]
     fn it_walks_descendants() {
         let mut tree: Tree<'_, usize> = Tree::new();
         let mut path = vec!["a", "b", "c"];
-        let c_index = tree.add_path(&mut path);
-        assert_eq!(3, c_index);
+        tree.add_path(&mut path);
+
+        match tree.get_node_at_path(&mut ["a", "b", "c"]) {
+            None => panic!("failed to get node at path"),
+            Some(node) => assert_eq!(node.value, 0),
+        }
+
+        match tree.get_node_at_path(&mut ["a", "b"]) {
+            None => panic!("failed to get node at path"),
+            Some(node) => assert_eq!(node.value, 0),
+        }
+
+        match tree.get_node_at_path(&mut ["a"]) {
+            None => panic!("failed to get node at path"),
+            Some(node) => assert_eq!(node.value, 0),
+        }
+
+        tree.walk_descendants(0, |node| node.value += 1);
+
+        match tree.get_node_at_path(&mut ["a"]) {
+            None => panic!("failed to get node at path"),
+            Some(node) => assert_eq!(node.value, 1),
+        }
+
+        match tree.get_node_at_path(&mut ["a", "b"]) {
+            None => panic!("failed to get node at path"),
+            Some(node) => assert_eq!(node.value, 1),
+        }
+
+        match tree.get_node_at_path(&mut ["a", "b", "c"]) {
+            None => panic!("failed to get node at path"),
+            Some(node) => assert_eq!(node.value, 1),
+        }
     }
-    */
 }
-
-/*
-fn main() {
-    let mut tree: Tree<'_, usize> = Tree::new();
-    let mut path = vec!["a", "b", "c"];
-
-    let c_index = tree.add_path(&mut path);
-    println!("index of c is: {}", c_index);
-
-    tree.walk_ancestors(c_index, |n| n.value += 1);
-
-    let c = tree.arena[c_index].as_ref().unwrap();
-    println!("parent of c is: {:?}", c.parent);
-
-    // now we'll add c' to b
-    let mut path = vec!["a", "b", "c'"];
-
-    let c_prime_index = tree.add_path(&mut path);
-    println!("index of c' is: {}", c_prime_index);
-
-    let c_prime = tree.arena[c_prime_index].as_ref().unwrap();
-    println!("parent of c' is: {:?}", c_prime.parent);
-
-    let mut path = vec!["a", "b", "c", "d"];
-    tree.add_path(&mut path);
-
-    tree.display(&None, |node| Some(format!("{}", node.value)));
-
-    let mut path = vec!["a", "b", "c'", "d'"];
-    let d_prime_idx = tree.add_path(&mut path);
-
-    tree.display(&None, |_| None);
-
-    let d_prime = tree.get_node_at_path(&mut path).unwrap();
-    println!("d_prime is {}", d_prime.value);
-    let mut d_prime = tree.get_node_at_path_mut(&mut path).unwrap();
-    d_prime.value = 42;
-    let d_prime = tree.get_node_at_path(&mut path).unwrap();
-    println!("d_prime is {}", d_prime.value);
-
-    tree.walk_ancestors(d_prime_idx, |_| {});
-}
-*/
