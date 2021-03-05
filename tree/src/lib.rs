@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-struct Tree<'a, V>
+pub struct Tree<'a, V>
 where
     V: Default,
 {
@@ -200,7 +200,7 @@ where
     }
 }
 
-struct Node<'a, V>
+pub struct Node<'a, V>
 where
     V: Default,
 {
