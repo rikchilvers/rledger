@@ -3,10 +3,12 @@ extern crate journal;
 extern crate reader;
 extern crate tree;
 
+mod accounts;
 mod command;
 mod print;
 mod stats;
 
+use crate::accounts::Accounts;
 use crate::print::Printer;
 use crate::stats::Statistics;
 
@@ -25,16 +27,17 @@ fn main() {
                 .env("LEDGER_FILE")
                 .value_name("LEDGER_FILE"),
         )
-        .subcommand(App::new("print").about("Show transaction entries.").alias("p"))
+        .subcommand(App::new("print").about("Show transaction entries").alias("p"))
         .subcommand(
             App::new("statistics")
-                .about("Show statistics about the journal.")
+                .about("Show statistics about the journal")
                 .aliases(&["stats", "s"]),
         )
+        .subcommand(App::new("accounts").about("List all accounts").aliases(&["acc", "a"]))
         .get_matches();
 
     if matches.value_of("file").is_none() && matches.occurrences_of("file") == 0 {
-        println!("No journal file was passed and none could be found in the environment.");
+        println!("No journal file was passed and none could be found in the environment");
         return;
     }
 
@@ -44,6 +47,14 @@ fn main() {
         let mut printer = Printer::new();
 
         if let Err(e) = printer.read(file) {
+            println!("{}", e);
+        }
+    }
+
+    if let Some(_) = matches.subcommand_matches("accounts") {
+        let file = matches.value_of("file").unwrap().to_owned();
+        let mut accounts = Accounts::new();
+        if let Err(e) = accounts.read(file) {
             println!("{}", e);
         }
     }
