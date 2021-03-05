@@ -70,15 +70,29 @@ where
     /// Convenience method for adding a node and setting it's value
     pub fn add_value_at_path(&mut self, path: &mut [&'a str], value: V) {
         let index = self.add_path(path);
-        let node = self.get_node_at_path_mut(path).unwrap();
+        let node = self.get_node_at_index_mut(index).unwrap();
         node.value = value;
     }
 
+    pub fn get_node_at_index(&mut self, index: usize) -> Option<&Node<'a, V>> {
+        match self.arena.get(index) {
+            None => None,
+            Some(node) => node.as_ref(),
+        }
+    }
+
+    pub fn get_node_at_index_mut(&mut self, index: usize) -> Option<&mut Node<'a, V>> {
+        match self.arena.get_mut(index) {
+            None => None,
+            Some(node) => node.as_mut(),
+        }
+    }
+
     /// If the path did not exist, return None
-    pub fn get_node_at_path(&mut self, path: &mut [&'a str]) -> Option<&Node<'a, V>> {
+    pub fn get_node_at_path(&'a mut self, path: &mut [&'a str]) -> Option<&Node<'a, V>> {
         match index_of_node_at_path(&self.arena, path, self.root) {
-            None => return None,
-            Some(index) => return self.arena[index].as_ref(),
+            None => None,
+            Some(index) => self.get_node_at_index(index),
         }
     }
 
@@ -86,7 +100,7 @@ where
     pub fn get_node_at_path_mut(&mut self, path: &mut [&'a str]) -> Option<&mut Node<'a, V>> {
         match index_of_node_at_path(&self.arena, path, self.root) {
             None => None,
-            Some(index) => self.arena[index].as_mut(),
+            Some(index) => self.get_node_at_index_mut(index),
         }
     }
 
