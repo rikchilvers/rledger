@@ -4,11 +4,13 @@ extern crate reader;
 extern crate tree;
 
 mod accounts;
+mod balance;
 mod command;
 mod print;
 mod stats;
 
 use crate::accounts::Accounts;
+use crate::balance::Balance;
 use crate::print::Printer;
 use crate::stats::Statistics;
 
@@ -34,6 +36,11 @@ fn main() {
                 .aliases(&["stats", "s"]),
         )
         .subcommand(App::new("accounts").about("List all accounts").aliases(&["acc", "a"]))
+        .subcommand(
+            App::new("balance")
+                .about("Show accounts and their balances")
+                .aliases(&["bal", "b"]),
+        )
         .get_matches();
 
     if matches.value_of("file").is_none() && matches.occurrences_of("file") == 0 {
@@ -43,9 +50,7 @@ fn main() {
 
     if let Some(_) = matches.subcommand_matches("print") {
         let file = matches.value_of("file").unwrap().to_owned();
-
         let mut printer = Printer::new();
-
         if let Err(e) = printer.read(file) {
             println!("{}", e);
         }
@@ -59,11 +64,17 @@ fn main() {
         }
     }
 
+    if let Some(_) = matches.subcommand_matches("balance") {
+        let file = matches.value_of("file").unwrap().to_owned();
+        let mut balance = Balance::new();
+        if let Err(e) = balance.read(file) {
+            println!("{}", e);
+        }
+    }
+
     if let Some(_) = matches.subcommand_matches("statistics") {
         let file = matches.value_of("file").unwrap().to_owned();
-
         let mut stats = Statistics::new();
-
         if let Err(e) = stats.read(file) {
             println!("{}", e);
         }
