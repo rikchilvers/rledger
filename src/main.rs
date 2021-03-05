@@ -1,6 +1,7 @@
 extern crate clap;
 extern crate journal;
 extern crate reader;
+extern crate tree;
 
 mod command;
 mod print;
