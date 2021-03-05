@@ -328,7 +328,8 @@ impl Source {
     }
 
     fn parse_posting(&mut self, iter: &mut Peekable<Chars>) -> Result<Posting, Error> {
-        let account = take_to_multispace(iter);
+        // FIXME there should be a way of doing this that doesn't introduce a new allocation
+        let account = take_to_multispace(iter).trim_end().to_owned();
 
         consume_space(iter);
 
