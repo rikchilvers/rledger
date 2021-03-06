@@ -109,10 +109,6 @@ where
     where
         F: FnMut(&mut Node<'a, V>),
     {
-        if root == self.root {
-            return;
-        }
-
         match self.arena[root].as_mut() {
             None => return,
             Some(node) => {
