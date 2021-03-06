@@ -182,7 +182,7 @@ where
             // indenting from https://stackoverflow.com/a/42273813
             match f(child) {
                 None => println!("{:indent$}{}", "", name, indent = indent),
-                Some(t) => println!("{:>20}  {:indent$}{}", t, "", name, indent = indent),
+                Some(t) => println!("{:>20}  {:indent$}{}", t, "", name, indent = indent * 2),
             }
 
             child.display(indent, &self.arena, f);
@@ -246,7 +246,7 @@ where
             // indenting from https://stackoverflow.com/a/42273813
             match f(child) {
                 None => println!("{:indent$}{}", "", name, indent = indent),
-                Some(t) => println!("{:>20}  {:indent$}{}", t, "", name, indent = indent),
+                Some(t) => println!("{:>20}  {:indent$}{}", t, "", name, indent = indent * 2),
             }
 
             child.display(indent, arena, f);
