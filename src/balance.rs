@@ -46,7 +46,9 @@ impl<'a> Balance<'a> {
         }
 
         self.tree.display(&None, |node| {
-            let s = format!("{}", node.value.amount.quantity);
+            let amount = &node.value.amount;
+            let quantity = amount.quantity as f64 / 100.;
+            let s = format!("{}{:.2}", amount.commodity, quantity);
             Some(s)
         });
 
