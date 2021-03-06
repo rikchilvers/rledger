@@ -176,7 +176,9 @@ where
             Some(root) => self.arena[*root].as_ref().unwrap(),
         };
 
-        for (name, child_index) in root_node.children.iter() {
+        let mut children: Vec<(_, _)> = root_node.children.iter().collect();
+        children.sort_by(|a, b| a.0.cmp(b.0));
+        for (name, child_index) in children {
             let child = self.arena[*child_index].as_ref().unwrap();
 
             // indenting from https://stackoverflow.com/a/42273813
@@ -240,7 +242,9 @@ where
         F: Fn(&Self) -> Option<String> + Copy,
     {
         indent += 1;
-        for (name, child_index) in self.children.iter() {
+        let mut children: Vec<(_, _)> = self.children.iter().collect();
+        children.sort_by(|a, b| a.0.cmp(b.0));
+        for (name, child_index) in children {
             let child = arena[*child_index].as_ref().unwrap();
 
             // indenting from https://stackoverflow.com/a/42273813
