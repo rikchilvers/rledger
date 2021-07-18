@@ -1,30 +1,7 @@
+use super::Status;
 use std::cmp::Ordering;
 
 use super::Posting;
-
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub enum Status {
-    // TODO: change to None
-    NoStatus,
-    Cleared,
-    Uncleared,
-}
-
-impl Default for Status {
-    fn default() -> Self {
-        Status::NoStatus
-    }
-}
-
-impl std::fmt::Display for Status {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Status::NoStatus => write!(f, " "),
-            Status::Cleared => write!(f, "*"),
-            Status::Uncleared => write!(f, "!"),
-        }
-    }
-}
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Transaction {

@@ -1,6 +1,6 @@
 use std::{iter::Peekable, path::PathBuf, str::Chars, sync::mpsc::Sender, thread};
 
-use journal::{transaction::Status, Amount, Posting, Transaction};
+use journal::{Amount, Posting, Status, Transaction};
 
 use super::{
     bufreader::BufReader,
@@ -60,6 +60,7 @@ impl Source {
     }
 
     /// Wraps an ErrorKind with the location of this source
+    // TODO move this into the Error file
     fn new_error(&self, kind: ErrorKind) -> Error {
         Error {
             location: self.location.clone(),
@@ -369,7 +370,7 @@ impl Source {
 
 fn parse_quantity(s: String) -> Result<i64, std::num::ParseIntError> {
     let s = s.trim_end();
-    // TODO is len the right way to find the length of the string?
+    // NB taking len() may not work with non-ASCII strings
     let length = s.len() - 1;
 
     return match s.find(".") {
