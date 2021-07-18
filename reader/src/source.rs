@@ -338,11 +338,7 @@ impl Source {
         let mut quantity: Option<i64> = None;
         let parsed = take_to_end(iter);
         if parsed.len() > 0 {
-            let q: f64 = parsed
-                .trim_end()
-                .parse()
-                .map_err(|_| self.new_error(ErrorKind::Parse(LineType::Posting)))?;
-            quantity = Some((q * 100.) as i64);
+            quantity = Some(parse_quantity(parsed).map_err(|_| self.new_error(ErrorKind::Parse(LineType::Posting)))?);
         }
 
         let mut posting = Posting {
@@ -369,6 +365,21 @@ impl Source {
             _ => Some(comment),
         }
     }
+}
+
+fn parse_quantity(s: String) -> Result<i64, std::num::ParseIntError> {
+    let s = s.trim_end();
+
+    if s.contains(".") {
+        let q: i64 = s.replace(".", "").parse()?;
+        return Ok(q);
+    }
+
+    let q: i64 = s.replace(".", "").parse()?;
+
+    // If the input did not contain a decimal, we need to multiply by 100 so it matches others
+    // e.g. "10" => 10 but "10.00" => 1000
+    Ok(q * 100)
 }
 
 fn take_to_multispace(iter: &mut Peekable<Chars>) -> String {
@@ -454,4 +465,22 @@ fn is_comment_indicator(c: &char) -> bool {
 
 fn is_status(c: &char) -> bool {
     c == &'!' || c == &'*'
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn it_parses_quantities() {
+        let inputs = vec!["-489.61", "-10", "423.03", "21.25", "15.03", "40.30"];
+        let expected = vec![-48961, -1000, 42303, 2125, 1503, 4030];
+        for (input, expected) in inputs.into_iter().zip(expected.into_iter()) {
+            // let input = "423.01".to_owned();
+            let output = parse_quantity(input.to_owned());
+            // let output = parse_quantity(input.to_owned());
+            assert!(output.is_ok());
+            assert_eq!(output.unwrap(), expected)
+        }
+    }
 }
