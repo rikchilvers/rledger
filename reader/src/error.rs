@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 /// Type of line found in a journal file
+#[derive(Debug)]
 pub enum LineType {
     Unknown,
     Comment,
@@ -24,6 +25,7 @@ impl std::fmt::Display for LineType {
 }
 
 /// Packages an ErrorKind with location information
+#[derive(Debug)]
 pub struct Error {
     /// The kind of error encountered
     pub kind: ErrorKind,
@@ -34,6 +36,7 @@ pub struct Error {
 }
 
 /// Indicates an error during reading of a journal file
+#[derive(Debug)]
 pub enum ErrorKind {
     IncorrectFormatting(String),
     DuplicateSource(PathBuf),
@@ -43,8 +46,23 @@ pub enum ErrorKind {
     TwoPostingsWithElidedAmounts,
     TransactionDoesNotBalance,
     IO(std::io::Error),
+    // TODO rename to ParseFailure
     Parse(LineType),
 }
+
+impl From<std::io::Error> for Error {
+    fn from(err: std::io::Error) -> Self {
+        Error {
+            kind: ErrorKind::IO(err),
+            // TODO this is not correct
+            location: PathBuf::new(),
+            // TODO this is not correct
+            line: 0,
+        }
+    }
+}
+
+impl std::error::Error for Error {}
 
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -62,7 +80,11 @@ impl std::fmt::Display for Error {
                 write!(f, "Two postings with elided amounts on line {}", self.line)
             }
             ErrorKind::TransactionDoesNotBalance => {
-                write!(f, "Transaction ending on line {} does not balance.", self.line)
+                write!(
+                    f,
+                    "{:?}: Transaction ending on line {} does not balance",
+                    self.location, self.line
+                )
             }
             ErrorKind::IO(e) => {
                 write!(f, "An IO error occurred on line {}: {:?}", self.line, e)

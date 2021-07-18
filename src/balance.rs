@@ -1,6 +1,5 @@
 use journal::Amount;
 use journal::Posting;
-use reader::error::Error;
 use reader::reader::{Config, Reader};
 use tree::Tree;
 
@@ -29,7 +28,8 @@ impl<'a> Balance<'a> {
         }
     }
 
-    pub fn read(&'a mut self, file: String) -> Result<(), Error> {
+    // FIXME for now, we're returning a boxed error because we could have tree/reader errors
+    pub fn read(&'a mut self, file: String) -> Result<(), Box<dyn std::error::Error>> {
         let mut reader = Reader::new();
         let config = Config::new();
 
@@ -42,7 +42,7 @@ impl<'a> Balance<'a> {
 
             self.tree.walk_ancestors(index, |node| {
                 node.value.amount.quantity += posting.amount.as_ref().unwrap().quantity
-            });
+            })?;
         }
 
         self.tree.display(&None, |node| {

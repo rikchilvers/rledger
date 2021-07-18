@@ -1,5 +1,22 @@
 use std::collections::HashMap;
 
+#[derive(Debug)]
+pub enum Error {
+    NodeOutOfBounds,
+    NodeNotPresent,
+}
+
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Error::NodeOutOfBounds => write!(f, "node out of bounds"),
+            Error::NodeNotPresent => write!(f, "node not present"),
+        }
+    }
+}
+
+impl std::error::Error for Error {}
+
 pub struct Tree<'a, V>
 where
     V: Default,
@@ -105,19 +122,24 @@ where
     }
 
     /// Applies `F` to root and all ancestors
-    pub fn walk_ancestors<F>(&mut self, root: usize, mut f: F)
+    pub fn walk_ancestors<F>(&mut self, root: usize, mut f: F) -> Result<(), Error>
     where
         F: FnMut(&mut Node<'a, V>),
     {
-        match self.arena[root].as_mut() {
-            None => return,
-            Some(node) => {
-                f(node);
+        match self.arena.get_mut(root) {
+            None => Err(Error::NodeOutOfBounds),
+            Some(node) => match node {
+                None => Err(Error::NodeNotPresent),
+                Some(node) => {
+                    f(node);
 
-                if let Some(parent_index) = node.parent {
-                    self.walk_ancestors(parent_index, f);
+                    if let Some(parent_index) = node.parent {
+                        return self.walk_ancestors(parent_index, f);
+                    }
+
+                    Ok(())
                 }
-            }
+            },
         }
     }
 
