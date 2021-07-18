@@ -369,17 +369,27 @@ impl Source {
 
 fn parse_quantity(s: String) -> Result<i64, std::num::ParseIntError> {
     let s = s.trim_end();
+    // TODO is len the right way to find the length of the string?
+    let length = s.len() - 1;
 
-    if s.contains(".") {
-        let q: i64 = s.replace(".", "").parse()?;
-        return Ok(q);
-    }
+    return match s.find(".") {
+        None => {
+            let q: i64 = s.parse()?;
 
-    let q: i64 = s.replace(".", "").parse()?;
-
-    // If the input did not contain a decimal, we need to multiply by 100 so it matches others
-    // e.g. "10" => 10 but "10.00" => 1000
-    Ok(q * 100)
+            // If the input did not contain a decimal, we need to multiply by 100 so it matches others
+            // e.g. "10" => 10 but "10.00" => 1000
+            Ok(q * 100)
+        }
+        Some(index) => {
+            let multiplier = match length - index {
+                0 => 100, // e.g., "10."
+                1 => 10,  // e.g., "10.0"
+                _ => 1,   // e.g., "10.00"
+            };
+            let q: i64 = s.replace(".", "").parse()?;
+            return Ok(q * multiplier);
+        }
+    };
 }
 
 fn take_to_multispace(iter: &mut Peekable<Chars>) -> String {
@@ -473,8 +483,8 @@ mod tests {
 
     #[test]
     fn it_parses_quantities() {
-        let inputs = vec!["-489.61", "-10", "423.03", "21.25", "15.03", "40.30"];
-        let expected = vec![-48961, -1000, 42303, 2125, 1503, 4030];
+        let inputs = vec!["-489.61", "-10", "423.03", "21.25", "15.03", "40.30", "5.6"];
+        let expected = vec![-48961, -1000, 42303, 2125, 1503, 4030, 560];
         for (input, expected) in inputs.into_iter().zip(expected.into_iter()) {
             // let input = "423.01".to_owned();
             let output = parse_quantity(input.to_owned());
