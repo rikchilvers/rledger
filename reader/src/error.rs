@@ -1,5 +1,4 @@
 use std::path::PathBuf;
-use std::sync::Arc;
 
 /// Type of line found in a journal file
 pub enum LineType {
@@ -26,15 +25,18 @@ impl std::fmt::Display for LineType {
 
 /// Packages an ErrorKind with location information
 pub struct Error {
-    pub location: Arc<PathBuf>,
-    pub line: u64,
+    /// The kind of error encountered
     pub kind: ErrorKind,
+    /// The path of the file where the error was detected
+    pub location: PathBuf,
+    /// One-based line number where the error was detected
+    pub line: u64,
 }
 
 /// Indicates an error during reading of a journal file
 pub enum ErrorKind {
     IncorrectFormatting(String),
-    DuplicateSource(Arc<PathBuf>),
+    DuplicateSource(PathBuf),
     UnexpectedItem(LineType),
     MissingPosting,
     MissingTransaction,

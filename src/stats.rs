@@ -1,6 +1,5 @@
 use std::collections::HashSet;
 use std::path::PathBuf;
-use std::sync::Arc;
 
 use journal::Transaction;
 use reader::error::Error;
@@ -11,7 +10,7 @@ use reader::reader::{Config, Reader};
 pub struct Statistics {
     start_date: Date,
     end_date: Date,
-    sources: HashSet<Arc<PathBuf>>,
+    sources: HashSet<PathBuf>,
     transaction_count: usize,
     posting_count: usize,
     unique_accounts: HashSet<String>,
@@ -71,7 +70,7 @@ impl Statistics {
         let txs_per_day = (self.transaction_count as f64) / days;
 
         println!("Transactions found in {} files", self.sources.len());
-        let mut sources: Vec<&Arc<PathBuf>> = self.sources.iter().collect();
+        let mut sources: Vec<&PathBuf> = self.sources.iter().collect();
         sources.sort();
         for s in sources {
             println!("  {:?}", s)

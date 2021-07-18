@@ -5,7 +5,7 @@ use journal::Transaction;
 
 use std::sync::mpsc;
 use std::thread;
-use std::{collections::HashSet, path::PathBuf, sync::Arc};
+use std::{collections::HashSet, path::PathBuf};
 
 use rayon::prelude::*;
 
@@ -37,16 +37,17 @@ impl Reader {
     }
 
     // TODO: make this take things that are into<pathbuf>
-    pub fn read(
+    pub fn read<P: Into<PathBuf>>(
         &mut self,
-        location: String,
+        location: P,
         config: Config,
-    ) -> Result<(Vec<Transaction>, Vec<Posting>, HashSet<Arc<PathBuf>>), Error> {
+    ) -> Result<(Vec<Transaction>, Vec<Posting>, HashSet<PathBuf>), Error> {
+        let location = location.into();
         let (send, recv) = mpsc::channel();
 
         let source_location = location.clone();
         thread::spawn(move || {
-            let mut source = Source::new(&source_location);
+            let mut source = Source::new(source_location);
             source.parse(send);
         });
 
@@ -55,7 +56,7 @@ impl Reader {
         let mut transactions = Vec::with_capacity(if config.read_transactions { TRANSACTION_COUNT } else { 0 });
         let mut postings = Vec::with_capacity(if config.read_postings { POSTING_COUNT } else { 0 });
         let mut visited_sources = HashSet::new(); // HashSet<Arc<PathBuf>>,
-        visited_sources.insert(Arc::new(PathBuf::from(location)));
+        visited_sources.insert(location.into());
 
         for t in recv {
             match t {
@@ -83,8 +84,7 @@ impl Reader {
                         }
                     }
                     ItemKind::IncludeDirective(include) => {
-                        let to_insert = Arc::clone(&include);
-                        if !visited_sources.insert(to_insert) {
+                        if !visited_sources.insert(include.clone()) {
                             let error = Error {
                                 kind: ErrorKind::DuplicateSource(include),
                                 line: 0,

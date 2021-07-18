@@ -1,4 +1,4 @@
-use std::{iter::Peekable, path::Path, path::PathBuf, str::Chars, sync::mpsc::Sender, sync::Arc, thread};
+use std::{iter::Peekable, path::PathBuf, str::Chars, sync::mpsc::Sender, thread};
 
 use journal::{transaction::Status, Amount, Posting, Transaction};
 
@@ -17,19 +17,19 @@ enum State {
 }
 
 pub struct ParsedItem {
-    pub location: Arc<PathBuf>,
+    pub location: PathBuf,
     pub kind: ItemKind,
 }
 
 pub enum ItemKind {
     SourceComplete,
     Transaction(Transaction, Vec<Posting>),
-    IncludeDirective(Arc<PathBuf>),
+    IncludeDirective(PathBuf),
 }
 
 pub struct Source {
     // TODO see if we can remove this Arc until it's being passed between threads
-    location: Arc<PathBuf>,
+    location: PathBuf,
     contents: BufReader,
     state: State,
     line: u64,
@@ -38,21 +38,23 @@ pub struct Source {
 }
 
 impl Source {
-    pub fn new<P: Into<PathBuf> + AsRef<Path> + Copy>(path: P) -> Self {
-        Self {
-            location: Arc::new(path.into()),
-            contents: BufReader::open(path).unwrap(),
+    pub fn new<P: Into<PathBuf>>(path: P) -> Self {
+        let path = path.into();
+
+        return Self {
+            location: path.clone(),
+            contents: BufReader::open(&path).unwrap(),
             state: State::None,
             line: 0,
             transaction: None,
             postings: Vec::with_capacity(10),
-        }
+        };
     }
 
     /// Wraps a ParsedItem with the location of this source
     fn new_item(&self, kind: ItemKind) -> ParsedItem {
         ParsedItem {
-            location: Arc::clone(&self.location),
+            location: self.location.clone(),
             kind,
         }
     }
@@ -60,7 +62,7 @@ impl Source {
     /// Wraps an ErrorKind with the location of this source
     fn new_error(&self, kind: ErrorKind) -> Error {
         Error {
-            location: Arc::clone(&self.location),
+            location: self.location.clone(),
             line: self.line,
             kind,
         }
@@ -240,9 +242,7 @@ impl Source {
                             match self.location.clone().parent() {
                                 None => panic!("no parent"),
                                 Some(parent) => {
-                                    return Ok(
-                                        self.new_item(ItemKind::IncludeDirective(Arc::new(parent.join(include))))
-                                    );
+                                    return Ok(self.new_item(ItemKind::IncludeDirective(parent.join(include))));
                                 }
                             }
                         }
