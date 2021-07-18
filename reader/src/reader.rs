@@ -28,7 +28,7 @@ impl Config {
     }
 }
 
-// TODO does this need to be a struct?
+/// Reader reads ledger files and returns the transactions, postings and included file paths it found
 pub struct Reader {}
 
 impl Reader {
@@ -36,7 +36,6 @@ impl Reader {
         Self {}
     }
 
-    // TODO: make this take things that are into<pathbuf>
     pub fn read<P: Into<PathBuf>>(
         &mut self,
         location: P,

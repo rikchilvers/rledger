@@ -14,6 +14,8 @@ impl Amount {
     }
 }
 
+// TOOD custom impl for adding
+
 impl std::fmt::Display for Amount {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let quantity = self.quantity as f64 / 100.;

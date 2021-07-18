@@ -44,6 +44,7 @@ pub enum ErrorKind {
     MissingPosting,
     MissingTransaction,
     TwoPostingsWithElidedAmounts,
+    // TODO add how much it doesn't balance by
     TransactionDoesNotBalance,
     IO(std::io::Error),
     // TODO rename to ParseFailure
