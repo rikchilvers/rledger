@@ -5,12 +5,14 @@ extern crate tree;
 
 mod accounts;
 mod balance;
+mod budget;
 mod command;
 mod print;
 mod stats;
 
 use crate::accounts::Accounts;
 use crate::balance::Balance;
+use crate::budget::Budget;
 use crate::print::Printer;
 use crate::stats::Statistics;
 
@@ -33,14 +35,15 @@ fn main() {
         .subcommand(
             App::new("statistics")
                 .about("Show statistics about the journal")
-                .aliases(&["stats", "s"]),
+                .aliases(&["stats"]),
         )
         .subcommand(App::new("accounts").about("List all accounts").aliases(&["acc", "a"]))
         .subcommand(
             App::new("balance")
                 .about("Show accounts and their balances")
-                .aliases(&["bal", "b"]),
+                .aliases(&["bal"]),
         )
+        .subcommand(App::new("budget").about("Show budget status").aliases(&["bud"]))
         .get_matches();
 
     if matches.value_of("file").is_none() && matches.occurrences_of("file") == 0 {
@@ -68,6 +71,14 @@ fn main() {
         let file = matches.value_of("file").unwrap().to_owned();
         let mut balance = Balance::new();
         if let Err(e) = balance.read(file) {
+            println!("{}", e);
+        }
+    }
+
+    if let Some(_) = matches.subcommand_matches("budget") {
+        let file = matches.value_of("file").unwrap().to_owned();
+        let mut budget = Budget::new();
+        if let Err(e) = budget.read(file) {
             println!("{}", e);
         }
     }
